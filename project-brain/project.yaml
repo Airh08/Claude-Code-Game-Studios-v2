@@ -1,0 +1,20 @@
+project:
+  name: ""
+  engine: "Unity"
+  engine_version: "6.3"
+  language: "C#"
+  status: "prototype"
+
+game:
+  genre: ""
+  perspective: ""
+  platforms: []
+
+architecture:
+  input_system: "Unity Input System"
+  render_pipeline: ""
+
+constraints:
+  target_fps: 60
+  third_party_assets: ""
+  networking: false
