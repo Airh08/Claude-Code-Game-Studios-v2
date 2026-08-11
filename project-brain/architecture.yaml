@@ -1,0 +1,15 @@
+architecture:
+  pattern: ""
+  principles: []
+
+systems:
+  player: {}
+  input: {}
+  camera: {}
+  combat: {}
+  ui: {}
+  audio: {}
+  save: {}
+  scene_management: {}
+
+dependencies: []
