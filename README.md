@@ -5,6 +5,7 @@ AI-assisted game development framework for Unity 6.x, designed around project aw
 ## What is included
 
 - **Game Director** for orchestration and task decomposition.
+- **Task Router** for selecting the smallest useful specialist team.
 - **Specialist agents** for design, gameplay, Unity architecture, systems, UI, technical art, and QA.
 - **Project Brain** as the source of truth for project architecture and state.
 - **Skills** for analyze, plan, implement, test, review, fix, and project health.
@@ -15,6 +16,7 @@ AI-assisted game development framework for Unity 6.x, designed around project aw
 
 ```text
 /analyze
+   -> task-router
    -> /plan
    -> /implement
    -> /test
@@ -33,4 +35,4 @@ AI-assisted game development framework for Unity 6.x, designed around project aw
 
 ## Current status
 
-Foundation / MVP. The repository currently contains the core agent, skill, rules, memory, and project-brain structures. Unity automation and AI playtesting are planned next.
+Foundation / MVP. The repository contains the core agent, router, skill, rules, memory, and project-brain structures. The next milestone is executable Unity project inspection and validation.
