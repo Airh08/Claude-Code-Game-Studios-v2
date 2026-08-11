@@ -1,0 +1,9 @@
+systems: {}
+
+# Each system may use this shape:
+# player:
+#   owner: gameplay-programmer
+#   status: planned|prototype|stable|deprecated
+#   dependencies: []
+#   entry_points: []
+#   notes: ""
