@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -62,10 +63,10 @@ public static class CcgsEditorScanner
             inputActionAssets = FindInputActionAssets()
         };
 
-        var output = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, OutputPath);
+        var projectRoot = Directory.GetParent(Application.dataPath)!.FullName;
+        var output = Path.Combine(projectRoot, OutputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
         File.WriteAllText(output, JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }));
-        AssetDatabase.Refresh();
         Debug.Log($"CCGS snapshot generated: {output}");
     }
 
