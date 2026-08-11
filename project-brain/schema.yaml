@@ -1,0 +1,27 @@
+version: 1
+
+project:
+  required:
+    - name
+    - engine
+    - engine_version
+    - status
+
+architecture:
+  required:
+    - input_system
+
+systems:
+  allowed_statuses:
+    - planned
+    - prototype
+    - stable
+    - deprecated
+
+analysis:
+  source: deterministic-scanner-or-targeted-inspection
+  rule: never-invent-unobserved-project-facts
+
+quality:
+  score_range: 0-100
+  null_means_not_measured
