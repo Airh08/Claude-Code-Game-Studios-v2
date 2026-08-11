@@ -1,0 +1,17 @@
+project:
+  status: "prototype"
+  last_analyzed: null
+  last_validated: null
+
+systems: {}
+
+known_issues: []
+
+active_work: []
+
+quality:
+  architecture: null
+  code_quality: null
+  test_coverage: null
+  performance: null
+  overall: null
