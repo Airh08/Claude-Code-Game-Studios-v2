@@ -1,0 +1,84 @@
+using System.Text.Json;
+
+namespace Ccgs.Cli;
+
+public sealed record HealthIssue(
+    string Code,
+    string Severity,
+    string Message,
+    string? Path = null);
+
+public sealed class HealthReport
+{
+    public int Critical { get; init; }
+    public int Errors { get; init; }
+    public int Warnings { get; init; }
+    public int Info { get; init; }
+    public List<HealthIssue> Issues { get; init; } = new();
+
+    public static HealthReport FromScan(JsonElement scan)
+    {
+        var issues = new List<HealthIssue>();
+
+        if (!scan.GetProperty("IsUnityProject").GetBoolean())
+        {
+            issues.Add(new HealthIssue(
+                "PROJECT-001",
+                "critical",
+                "The selected directory is not recognized as a Unity project."));
+        }
+
+        foreach (var path in scan.GetProperty("MissingBuildScenes").EnumerateArray())
+        {
+            issues.Add(new HealthIssue(
+                "BUILD-001",
+                "error",
+                "Build Settings references a scene path that does not exist.",
+                path.GetString()));
+        }
+
+        foreach (var guid in scan.GetProperty("MissingBuildSceneGuids").EnumerateArray())
+        {
+            issues.Add(new HealthIssue(
+                "BUILD-002",
+                "error",
+                "Build Settings contains a scene GUID that does not resolve to an existing scene meta file.",
+                guid.GetString()));
+        }
+
+        foreach (var warning in scan.GetProperty("InputCallbackWarnings").EnumerateArray())
+        {
+            issues.Add(new HealthIssue(
+                "INPUT-001",
+                "warning",
+                warning.GetString() ?? "Input callback configuration requires Unity Editor inspection."));
+        }
+
+        if (scan.GetProperty("TestDirectories").GetArrayLength() == 0)
+        {
+            issues.Add(new HealthIssue(
+                "TEST-001",
+                "warning",
+                "No test directories were discovered; establish a baseline of automated tests."));
+        }
+
+        foreach (var warning in scan.GetProperty("Warnings").EnumerateArray())
+        {
+            var message = warning.GetString() ?? "Scanner warning.";
+            if (message.Contains("Build Settings scene path(s)", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Build Settings scene GUID(s)", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            issues.Add(new HealthIssue("SCAN-001", "warning", message));
+        }
+
+        return new HealthReport
+        {
+            Critical = issues.Count(x => x.Severity == "critical"),
+            Errors = issues.Count(x => x.Severity == "error"),
+            Warnings = issues.Count(x => x.Severity == "warning"),
+            Info = issues.Count(x => x.Severity == "info"),
+            Issues = issues
+        };
+    }
+}
