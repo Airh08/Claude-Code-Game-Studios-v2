@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Ccgs.Cli;
 
 if (args.Length == 0 || args.Contains("--help", StringComparer.OrdinalIgnoreCase))
 {
@@ -9,7 +10,9 @@ if (args.Length == 0 || args.Contains("--help", StringComparer.OrdinalIgnoreCase
 }
 
 var command = args[0].ToLowerInvariant();
-var projectRoot = args.Length > 1 ? Path.GetFullPath(args[1]) : Directory.GetCurrentDirectory();
+var projectRoot = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
+    ? Path.GetFullPath(args[1])
+    : Directory.GetCurrentDirectory();
 
 switch (command)
 {
@@ -40,12 +43,14 @@ static void RunAnalyze(string root, bool pretty)
     var scanner = LocateScanner();
     var json = RunProcess(scanner, $"\"{root}\" --pretty");
     using var document = JsonDocument.Parse(json);
+    var scan = document.RootElement.Clone();
     var report = new AnalysisReport
     {
         GeneratedAtUtc = DateTime.UtcNow.ToString("O"),
         ProjectRoot = root,
-        Scanner = document.RootElement.Clone(),
-        Recommendations = BuildRecommendations(document.RootElement)
+        Scanner = scan,
+        Health = HealthReport.FromScan(scan),
+        Recommendations = BuildRecommendations(scan)
     };
 
     var options = new JsonSerializerOptions
@@ -64,10 +69,12 @@ static List<string> BuildRecommendations(JsonElement scan)
         recommendations.Add("Verify the selected directory is a Unity project root.");
     if (!scan.GetProperty("HasInputSystem").GetBoolean())
         recommendations.Add("Review input architecture; Unity Input System was not detected.");
-    if (scan.GetProperty("Warnings").GetArrayLength() > 0)
-        recommendations.Add("Review scanner warnings before implementation work.");
+    if (scan.GetProperty("MissingBuildScenes").GetArrayLength() > 0)
+        recommendations.Add("Fix Build Settings entries that reference non-existent scene paths.");
+    if (scan.GetProperty("InputCallbackWarnings").GetArrayLength() > 0)
+        recommendations.Add("Inspect PlayerInput notification behavior in the Unity Editor before changing input callbacks.");
     if (scan.GetProperty("TestDirectories").GetArrayLength() == 0)
-        recommendations.Add("No test directories were discovered; establish baseline automated tests.");
+        recommendations.Add("Establish baseline automated tests.");
     return recommendations;
 }
 
@@ -113,7 +120,7 @@ static void PrintHelp()
     Console.WriteLine("Usage: ccgs <command> <unity-project-root> [--pretty]");
     Console.WriteLine("Commands:");
     Console.WriteLine("  scan     Run deterministic filesystem inspection");
-    Console.WriteLine("  analyze  Run inspection and produce an analysis artifact");
+    Console.WriteLine("  analyze  Run inspection and produce a structured health report");
 }
 
 public sealed class AnalysisReport
@@ -121,5 +128,6 @@ public sealed class AnalysisReport
     public string GeneratedAtUtc { get; set; } = string.Empty;
     public string ProjectRoot { get; set; } = string.Empty;
     public JsonElement Scanner { get; set; }
+    public HealthReport Health { get; set; } = new();
     public List<string> Recommendations { get; set; } = new();
 }
