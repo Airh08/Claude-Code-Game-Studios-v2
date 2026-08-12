@@ -21,17 +21,27 @@ public static class UnityProjectScanner
         if (File.Exists(manifestPath) && !hasInputSystem) warnings.Add("Unity Input System package was not detected in Packages/manifest.json.");
         if (!File.Exists(manifestPath)) warnings.Add("Packages/manifest.json not found.");
 
+        var scripts = FindFiles(root, "Assets", "*.cs");
+        var validation = UnityValidation.Validate(root, scripts);
+        if (validation.MissingBuildScenes.Count > 0)
+            warnings.Add($"{validation.MissingBuildScenes.Count} Build Settings scene path(s) do not exist.");
+        if (validation.MissingBuildSceneGuids.Count > 0)
+            warnings.Add($"{validation.MissingBuildSceneGuids.Count} Build Settings scene GUID(s) do not match an existing scene meta file.");
+
         return new UnityProjectReport(
             root,
             unityVersion,
             isUnity,
             hasInputSystem,
             FindFiles(root, "Packages", "*.json"),
-            FindFiles(root, "Assets", "*.cs"),
+            scripts,
             FindFiles(root, "Assets", "*.unity"),
             FindFiles(root, "Assets", "*.prefab"),
             FindFiles(root, "Assets", "*.asmdef"),
             FindTestDirectories(root),
+            validation.MissingBuildScenes,
+            validation.MissingBuildSceneGuids,
+            validation.InputCallbackWarnings,
             warnings);
     }
 
