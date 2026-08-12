@@ -13,14 +13,16 @@ var command = args[0].ToLowerInvariant();
 var projectRoot = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
     ? Path.GetFullPath(args[1])
     : Directory.GetCurrentDirectory();
+var pretty = args.Contains("--pretty", StringComparer.OrdinalIgnoreCase);
+var syncBrain = args.Contains("--sync-brain", StringComparer.OrdinalIgnoreCase);
 
 switch (command)
 {
     case "scan":
-        RunScan(projectRoot, args.Contains("--pretty", StringComparer.OrdinalIgnoreCase));
+        RunScan(projectRoot, pretty);
         break;
     case "analyze":
-        RunAnalyze(projectRoot, args.Contains("--pretty", StringComparer.OrdinalIgnoreCase));
+        RunAnalyze(projectRoot, pretty, syncBrain);
         break;
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
@@ -37,21 +39,25 @@ static void RunScan(string root, bool pretty)
     Console.Write(result);
 }
 
-static void RunAnalyze(string root, bool pretty)
+static void RunAnalyze(string root, bool pretty, bool syncBrain)
 {
     ValidateProjectRoot(root);
     var scanner = LocateScanner();
     var json = RunProcess(scanner, $"\"{root}\" --pretty");
     using var document = JsonDocument.Parse(json);
     var scan = document.RootElement.Clone();
+    var health = HealthReport.FromScan(scan);
     var report = new AnalysisReport
     {
         GeneratedAtUtc = DateTime.UtcNow.ToString("O"),
         ProjectRoot = root,
         Scanner = scan,
-        Health = HealthReport.FromScan(scan),
+        Health = health,
         Recommendations = BuildRecommendations(scan)
     };
+
+    if (syncBrain)
+        report.BrainPath = BrainSync.Sync(root, scan, health);
 
     var options = new JsonSerializerOptions
     {
@@ -117,10 +123,12 @@ static void ValidateProjectRoot(string root)
 static void PrintHelp()
 {
     Console.WriteLine("CCGS CLI");
-    Console.WriteLine("Usage: ccgs <command> <unity-project-root> [--pretty]");
+    Console.WriteLine("Usage: ccgs <command> <unity-project-root> [--pretty] [--sync-brain]");
     Console.WriteLine("Commands:");
     Console.WriteLine("  scan     Run deterministic filesystem inspection");
     Console.WriteLine("  analyze  Run inspection and produce a structured health report");
+    Console.WriteLine("Options:");
+    Console.WriteLine("  --sync-brain  Persist observed analysis into <project>/project-brain");
 }
 
 public sealed class AnalysisReport
@@ -130,4 +138,5 @@ public sealed class AnalysisReport
     public JsonElement Scanner { get; set; }
     public HealthReport Health { get; set; } = new();
     public List<string> Recommendations { get; set; } = new();
+    public string? BrainPath { get; set; }
 }
