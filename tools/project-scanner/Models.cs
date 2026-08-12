@@ -11,4 +11,7 @@ public sealed record UnityProjectReport(
     IReadOnlyList<string> Prefabs,
     IReadOnlyList<string> AssemblyDefinitions,
     IReadOnlyList<string> TestDirectories,
+    IReadOnlyList<string> MissingBuildScenes,
+    IReadOnlyList<string> MissingBuildSceneGuids,
+    IReadOnlyList<string> InputCallbackWarnings,
     IReadOnlyList<string> Warnings);
