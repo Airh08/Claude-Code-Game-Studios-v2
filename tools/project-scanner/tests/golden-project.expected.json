@@ -1,0 +1,12 @@
+{
+  "UnityVersion": "6000.3.13f1",
+  "IsUnityProject": true,
+  "HasInputSystem": true,
+  "ScriptCount": 9,
+  "SceneCount": 7,
+  "MissingBuildSceneCount": 2,
+  "InputCallbackWarningCount": 1,
+  "TestDirectoryCount": 0,
+  "HealthErrorCount": 2,
+  "HealthWarningCount": 2
+}
