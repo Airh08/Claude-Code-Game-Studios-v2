@@ -28,6 +28,10 @@ public sealed class HealthReport
                 "The selected directory is not recognized as a Unity project."));
         }
 
+        // Missing path and missing GUID entries describe the same Build Settings
+        // records in the current scanner. Keep the health report actionable and
+        // avoid counting the same broken entry twice. The raw GUID list remains
+        // available under Scanner for deeper diagnostics.
         foreach (var path in scan.GetProperty("MissingBuildScenes").EnumerateArray())
         {
             issues.Add(new HealthIssue(
@@ -35,15 +39,6 @@ public sealed class HealthReport
                 "error",
                 "Build Settings references a scene path that does not exist.",
                 path.GetString()));
-        }
-
-        foreach (var guid in scan.GetProperty("MissingBuildSceneGuids").EnumerateArray())
-        {
-            issues.Add(new HealthIssue(
-                "BUILD-002",
-                "error",
-                "Build Settings contains a scene GUID that does not resolve to an existing scene meta file.",
-                guid.GetString()));
         }
 
         foreach (var warning in scan.GetProperty("InputCallbackWarnings").EnumerateArray())
