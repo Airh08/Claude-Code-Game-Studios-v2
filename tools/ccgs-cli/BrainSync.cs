@@ -37,7 +37,18 @@ public static class BrainSync
 
         foreach (var issue in current)
         {
-            if (existing.TryGetValue(issue.Key, out var prior))
+            if (!existing.TryGetValue(issue.Key, out var prior))
+            {
+                var legacyId = StableId(issue.Value.Code, null);
+                if (!string.Equals(legacyId, issue.Key, StringComparison.OrdinalIgnoreCase) && existing.Remove(legacyId, out var legacy))
+                {
+                    legacy.Id = issue.Key;
+                    prior = legacy;
+                    existing[issue.Key] = prior;
+                }
+            }
+
+            if (prior is not null)
             {
                 var oldStatus = prior.Status;
                 prior.Code = issue.Value.Code;
@@ -174,7 +185,7 @@ public static class BrainSync
 
     private sealed class BrainIssue
     {
-        public string Id { get; init; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public string Severity { get; set; } = string.Empty;
         public string Status { get; set; } = "open";
