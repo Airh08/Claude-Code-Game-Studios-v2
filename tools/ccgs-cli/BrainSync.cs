@@ -55,11 +55,19 @@ public static class BrainSync
                 prior.Severity = issue.Value.Severity;
                 prior.Message = issue.Value.Message;
                 prior.Path = issue.Value.Path;
-                prior.Status = oldStatus is "ignored" ? "ignored" : "open";
-                if (!string.Equals(oldStatus, prior.Status, StringComparison.OrdinalIgnoreCase))
-                    prior.History.Add(new HistoryEntry(prior.Status, now, "health-report"));
-                else if (oldStatus is "resolved")
-                    prior.History.Add(new HistoryEntry("open", now, "health-report"));
+
+                if (oldStatus is "resolved")
+                {
+                    prior.Status = "open";
+                    prior.History.Add(new HistoryEntry("reopened", now, "health-report"));
+                }
+                else
+                {
+                    prior.Status = oldStatus is "ignored" ? "ignored" : "open";
+                    if (!string.Equals(oldStatus, prior.Status, StringComparison.OrdinalIgnoreCase))
+                        prior.History.Add(new HistoryEntry(prior.Status, now, "health-report"));
+                }
+
                 prior.ResolvedAtUtc = null;
                 prior.LastObservedAtUtc = now;
             }
@@ -100,6 +108,8 @@ public static class BrainSync
     {
         var result = new Dictionary<string, BrainIssue>(StringComparer.OrdinalIgnoreCase);
         BrainIssue? current = null;
+        HistoryEntry? historyEntry = null;
+        var inHistory = false;
 
         foreach (var raw in lines)
         {
@@ -109,32 +119,70 @@ public static class BrainSync
                 if (current?.Id is not null)
                     result[current.Id] = current;
                 current = new BrainIssue { Id = line[8..].Trim() };
+                historyEntry = null;
+                inHistory = false;
                 continue;
             }
 
-            if (current is null || !line.StartsWith("    ", StringComparison.Ordinal))
+            if (current is null)
                 continue;
 
-            var separator = line.IndexOf(':', 4);
-            if (separator < 0)
-                continue;
-
-            var key = line[4..separator];
-            var value = Unquote(line[(separator + 1)..].Trim());
-            switch (key)
+            if (line.StartsWith("    history:", StringComparison.Ordinal))
             {
-                case "code": current.Code = value; break;
-                case "severity": current.Severity = value; break;
-                case "status": current.Status = value; break;
-                case "message": current.Message = value; break;
-                case "path": current.Path = value; break;
-                case "observed_at_utc": current.LastObservedAtUtc = value; break;
-                case "resolved_at_utc": current.ResolvedAtUtc = value; break;
-                case "source": current.Source = value; break;
-                case "history":
-                    try { current.History = JsonSerializer.Deserialize<List<HistoryEntry>>(value) ?? new List<HistoryEntry>(); }
-                    catch (JsonException) { current.History = new List<HistoryEntry>(); }
-                    break;
+                inHistory = true;
+                historyEntry = null;
+                continue;
+            }
+
+            if (inHistory && line.StartsWith("      - ", StringComparison.Ordinal))
+            {
+                historyEntry = new HistoryEntry(string.Empty, string.Empty, string.Empty);
+                current.History.Add(historyEntry);
+                continue;
+            }
+
+            if (inHistory && line.StartsWith("        ", StringComparison.Ordinal) && historyEntry is not null)
+            {
+                var separator = line.IndexOf(':', 8);
+                if (separator < 0)
+                    continue;
+
+                var key = line[8..separator];
+                var value = Unquote(line[(separator + 1)..].Trim());
+                historyEntry = historyEntry with
+                {
+                    Status = key == "status" ? value : historyEntry.Status,
+                    AtUtc = key == "at_utc" ? value : historyEntry.AtUtc,
+                    Source = key == "source" ? value : historyEntry.Source
+                };
+                current.History[^1] = historyEntry;
+                continue;
+            }
+
+            if (!line.StartsWith("    ", StringComparison.Ordinal))
+            {
+                inHistory = false;
+                historyEntry = null;
+                continue;
+            }
+
+            var fieldSeparator = line.IndexOf(':', 4);
+            if (fieldSeparator < 0)
+                continue;
+
+            var field = line[4..fieldSeparator];
+            var fieldValue = Unquote(line[(fieldSeparator + 1)..].Trim());
+            switch (field)
+            {
+                case "code": current.Code = fieldValue; break;
+                case "severity": current.Severity = fieldValue; break;
+                case "status": current.Status = fieldValue; break;
+                case "message": current.Message = fieldValue; break;
+                case "path": current.Path = fieldValue; break;
+                case "observed_at_utc": current.LastObservedAtUtc = fieldValue; break;
+                case "resolved_at_utc": current.ResolvedAtUtc = fieldValue; break;
+                case "source": current.Source = fieldValue; break;
+                case "history": inHistory = true; break;
             }
         }
 
@@ -146,7 +194,7 @@ public static class BrainSync
 
     private static void WriteIssues(string file, IEnumerable<BrainIssue> issues)
     {
-        var builder = new StringBuilder("schema_version: 2\nissues:\n");
+        var builder = new StringBuilder("schema_version: 3\nissues:\n");
         foreach (var issue in issues)
         {
             builder.AppendLine($"  - id: {issue.Id}");
@@ -160,7 +208,13 @@ public static class BrainSync
             if (!string.IsNullOrWhiteSpace(issue.ResolvedAtUtc))
                 builder.AppendLine($"    resolved_at_utc: \"{issue.ResolvedAtUtc}\"");
             builder.AppendLine($"    source: {issue.Source}");
-            builder.AppendLine($"    history: \"{Yaml(JsonSerializer.Serialize(issue.History))}\"");
+            builder.AppendLine("    history:");
+            foreach (var entry in issue.History)
+            {
+                builder.AppendLine("      - status: " + entry.Status);
+                builder.AppendLine("        at_utc: \"" + Yaml(entry.AtUtc) + "\"");
+                builder.AppendLine("        source: " + entry.Source);
+            }
         }
         File.WriteAllText(file, builder.ToString());
     }
