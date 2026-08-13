@@ -49,6 +49,7 @@ public static class BrainSync
                     prior.History.Add(new HistoryEntry(prior.Status, now, "health-report"));
                 else if (oldStatus is "resolved")
                     prior.History.Add(new HistoryEntry("open", now, "health-report"));
+                prior.ResolvedAtUtc = null;
                 prior.LastObservedAtUtc = now;
             }
             else
@@ -119,6 +120,10 @@ public static class BrainSync
                 case "observed_at_utc": current.LastObservedAtUtc = value; break;
                 case "resolved_at_utc": current.ResolvedAtUtc = value; break;
                 case "source": current.Source = value; break;
+                case "history":
+                    try { current.History = JsonSerializer.Deserialize<List<HistoryEntry>>(value) ?? new List<HistoryEntry>(); }
+                    catch (JsonException) { current.History = new List<HistoryEntry>(); }
+                    break;
             }
         }
 
