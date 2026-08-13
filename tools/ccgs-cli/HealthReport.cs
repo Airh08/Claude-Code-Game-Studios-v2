@@ -43,10 +43,12 @@ public sealed class HealthReport
 
         foreach (var warning in scan.GetProperty("InputCallbackWarnings").EnumerateArray())
         {
+            var message = warning.GetString() ?? "Input callback configuration requires Unity Editor inspection.";
             issues.Add(new HealthIssue(
                 "INPUT-001",
                 "warning",
-                warning.GetString() ?? "Input callback configuration requires Unity Editor inspection."));
+                message,
+                ExtractSubjectPath(message)));
         }
 
         if (scan.GetProperty("TestDirectories").GetArrayLength() == 0)
@@ -75,5 +77,17 @@ public sealed class HealthReport
             Info = issues.Count(x => x.Severity == "info"),
             Issues = issues
         };
+    }
+
+    private static string? ExtractSubjectPath(string message)
+    {
+        var separator = message.IndexOf(':');
+        if (separator <= 0)
+            return null;
+
+        var candidate = message[..separator].Trim();
+        return candidate.Contains('/') && candidate.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+            ? candidate
+            : null;
     }
 }
