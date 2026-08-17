@@ -1,11 +1,22 @@
 param(
-    [Parameter(Mandatory = $true)]
     [string]$ProjectRoot
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $cliProject = Join-Path $repoRoot 'tools\ccgs-cli\Ccgs.Cli.csproj'
+$fixtureRoot = Join-Path $repoRoot 'tools\test-fixtures\golden-project'
+
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ProjectRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("ccgs-brain-regression-" + [Guid]::NewGuid().ToString('N'))
+    Copy-Item $fixtureRoot $ProjectRoot -Recurse
+    $ownsProject = $true
+    Write-Host "Using isolated golden fixture copy: $ProjectRoot"
+} else {
+    $ownsProject = $false
+    Write-Host "Using explicit project override: $ProjectRoot"
+}
+
 $brainPath = Join-Path $ProjectRoot 'project-brain'
 $issuesPath = Join-Path $brainPath 'issues.yaml'
 
@@ -21,23 +32,25 @@ function Get-Ids {
 
 function Get-Block([string]$id) {
     $lines = Get-Content $issuesPath
-    $start = ($lines | Select-String -Pattern "^  - id:\s*$([regex]::Escape($id))$").LineNumber - 1
-    if ($start -lt 0) { throw "Issue not found: $id" }
+    $match = $lines | Select-String -Pattern "^  - id:\s*$([regex]::Escape($id))$" | Select-Object -First 1
+    if ($null -eq $match) { throw "Issue not found: $id" }
+    $start = $match.LineNumber - 1
     $end = $lines.Count
-    for ($i = $start + 1; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^  - id:\s*') { $end = $i; break } }
+    for ($i = $start + 1; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^  - id:\s*') { $end = $i; break }
+    }
     return ,$lines[$start..($end - 1)]
 }
 
-$original = if (Test-Path $issuesPath) { Get-Content $issuesPath -Raw } else { $null }
 try {
     $first = Sync-Brain
     $firstIds = @(Get-Ids)
-    if ($firstIds.Count -ne $first.Health.Issues.Count) { throw "First sync issue count mismatch." }
+    if ($firstIds.Count -ne 4 -or $first.Health.Issues.Count -ne 4) { throw "First sync expected 4 issues; got brain=$($firstIds.Count), health=$($first.Health.Issues.Count)." }
     Write-Host "PASS first sync issue count = $($firstIds.Count)"
 
     $second = Sync-Brain
     $secondIds = @(Get-Ids)
-    if ($secondIds.Count -ne $second.Health.Issues.Count) { throw "Second sync issue count mismatch." }
+    if ($secondIds.Count -ne 4 -or $second.Health.Issues.Count -ne 4) { throw "Second sync expected 4 issues; got brain=$($secondIds.Count), health=$($second.Health.Issues.Count)." }
     Write-Host "PASS second sync issue count = $($secondIds.Count)"
 
     if (Compare-Object (@($firstIds | Sort-Object)) (@($secondIds | Sort-Object))) { throw 'Issue IDs changed between consecutive syncs.' }
@@ -47,12 +60,10 @@ try {
     if ($text -notmatch '(?m)^    history:$' -or $text -match 'history:\s*"\[') { throw 'History is not stored as structured YAML.' }
     Write-Host 'PASS issue history is stored as structured YAML'
 
-    $testId = $null
-    foreach ($id in $secondIds) { if ((Get-Block $id) -match '(?m)^    status:\s*open$') { $testId = $id; break } }
-    if (-not $testId) { throw 'No open issue available for reopen test.' }
-
+    $testId = $secondIds[0]
     $lines = Get-Content $issuesPath
-    $start = ($lines | Select-String -Pattern "^  - id:\s*$([regex]::Escape($testId))$").LineNumber - 1
+    $startMatch = $lines | Select-String -Pattern "^  - id:\s*$([regex]::Escape($testId))$" | Select-Object -First 1
+    $start = $startMatch.LineNumber - 1
     for ($i = $start + 1; $i -lt $lines.Count; $i++) {
         if ($lines[$i] -match '^  - id:\s*') { break }
         if ($lines[$i] -match '^    status:\s*open$') { $lines[$i] = '    status: resolved'; break }
@@ -62,12 +73,12 @@ try {
     Sync-Brain | Out-Null
     $block = Get-Block $testId
     if ($block -notmatch '(?m)^    status:\s*open$') { throw "Issue did not reopen: $testId" }
-    if ($block -notmatch '(?m)^      - status:\s*reopened$') { throw "Reopen history was not persisted: $testId" }
+    if ($block -notmatch '(?m)^      - status: reopened$') { throw "Reopen history was not persisted: $testId" }
     Write-Host "PASS resolved -> reopened lifecycle for $testId"
 
     Write-Host ''
     Write-Host 'Brain persistence and reopen regression test passed.'
 }
 finally {
-    if ($null -ne $original) { Set-Content -Path $issuesPath -Value $original -NoNewline }
+    if ($ownsProject -and (Test-Path $ProjectRoot)) { Remove-Item $ProjectRoot -Recurse -Force }
 }
