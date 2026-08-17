@@ -40,8 +40,8 @@ $paths = @($buildIssues | ForEach-Object { $_.Path })
 if ($paths -notcontains 'Assets/Scenes/MainSceneV2.unity') {
     throw 'Health report did not include MainSceneV2 build issue.'
 }
-if ($paths -notcontains 'Assets/Scenes/FlashbackSceneV2.unity') {
-    throw 'Health report did not include FlashbackSceneV2 build issue.'
+if ($paths -notcontains 'Assets/Scenes/MenuSceneV2.unity') {
+    throw 'Health report did not include MenuSceneV2 build issue.'
 }
 Write-Host 'PASS Health report contains both expected BUILD-001 issues'
 

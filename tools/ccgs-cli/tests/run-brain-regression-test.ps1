@@ -71,7 +71,7 @@ try {
     Set-Content -Path $issuesPath -Value $lines
 
     Sync-Brain | Out-Null
-    $block = Get-Block $testId
+    $block = (Get-Block $testId) -join "`n"
     if ($block -notmatch '(?m)^    status:\s*open$') { throw "Issue did not reopen: $testId" }
     if ($block -notmatch '(?m)^      - status: reopened$') { throw "Reopen history was not persisted: $testId" }
     Write-Host "PASS resolved -> reopened lifecycle for $testId"

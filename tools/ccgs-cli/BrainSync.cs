@@ -136,7 +136,12 @@ public static class BrainSync
 
             if (inHistory && line.StartsWith("      - ", StringComparison.Ordinal))
             {
-                historyEntry = new HistoryEntry(string.Empty, string.Empty, string.Empty);
+                var inlineStatus = string.Empty;
+                var inlineSeparator = line.IndexOf(':', 8);
+                if (inlineSeparator >= 0 && line[8..inlineSeparator].Trim() == "status")
+                    inlineStatus = Unquote(line[(inlineSeparator + 1)..].Trim());
+
+                historyEntry = new HistoryEntry(inlineStatus, string.Empty, string.Empty);
                 current.History.Add(historyEntry);
                 continue;
             }
@@ -241,26 +246,31 @@ public static class BrainSync
         var builder = new StringBuilder("schema_version: 3\nissues:\n");
         foreach (var issue in issues)
         {
-            builder.AppendLine($"  - id: {issue.Id}");
-            builder.AppendLine($"    code: {issue.Code}");
-            builder.AppendLine($"    severity: {issue.Severity}");
-            builder.AppendLine($"    status: {issue.Status}");
-            builder.AppendLine($"    message: \"{Yaml(issue.Message)}\"");
+            AppendLine(builder, $"  - id: {issue.Id}");
+            AppendLine(builder, $"    code: {issue.Code}");
+            AppendLine(builder, $"    severity: {issue.Severity}");
+            AppendLine(builder, $"    status: {issue.Status}");
+            AppendLine(builder, $"    message: \"{Yaml(issue.Message)}\"");
             if (!string.IsNullOrWhiteSpace(issue.Path))
-                builder.AppendLine($"    path: \"{Yaml(issue.Path!)}\"");
-            builder.AppendLine($"    observed_at_utc: \"{issue.LastObservedAtUtc}\"");
+                AppendLine(builder, $"    path: \"{Yaml(issue.Path!)}\"");
+            AppendLine(builder, $"    observed_at_utc: \"{issue.LastObservedAtUtc}\"");
             if (!string.IsNullOrWhiteSpace(issue.ResolvedAtUtc))
-                builder.AppendLine($"    resolved_at_utc: \"{issue.ResolvedAtUtc}\"");
-            builder.AppendLine($"    source: {issue.Source}");
-            builder.AppendLine("    history:");
+                AppendLine(builder, $"    resolved_at_utc: \"{issue.ResolvedAtUtc}\"");
+            AppendLine(builder, $"    source: {issue.Source}");
+            AppendLine(builder, "    history:");
             foreach (var entry in issue.History)
             {
-                builder.AppendLine("      - status: " + entry.Status);
-                builder.AppendLine("        at_utc: \"" + Yaml(entry.AtUtc) + "\"");
-                builder.AppendLine("        source: " + entry.Source);
+                AppendLine(builder, "      - status: " + entry.Status);
+                AppendLine(builder, "        at_utc: \"" + Yaml(entry.AtUtc) + "\"");
+                AppendLine(builder, "        source: " + entry.Source);
             }
         }
         File.WriteAllText(file, builder.ToString());
+    }
+
+    private static void AppendLine(StringBuilder builder, string line)
+    {
+        builder.Append(line).Append('\n');
     }
 
     private static string StableId(string code, string? path)

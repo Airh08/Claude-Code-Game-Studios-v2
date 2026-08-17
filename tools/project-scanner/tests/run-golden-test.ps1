@@ -41,8 +41,8 @@ Assert-Equal 'TestDirectoryCount' $json.TestDirectories.Count $expected.TestDire
 if ($json.MissingBuildScenes -notcontains 'Assets/Scenes/MainSceneV2.unity') {
     throw 'Expected missing build scene was not detected: Assets/Scenes/MainSceneV2.unity'
 }
-if ($json.MissingBuildScenes -notcontains 'Assets/Scenes/FlashbackSceneV2.unity') {
-    throw 'Expected missing build scene was not detected: Assets/Scenes/FlashbackSceneV2.unity'
+if ($json.MissingBuildScenes -notcontains 'Assets/Scenes/MenuSceneV2.unity') {
+    throw 'Expected missing build scene was not detected: Assets/Scenes/MenuSceneV2.unity'
 }
 Write-Host 'PASS expected missing Build Settings scenes detected'
 

@@ -9,5 +9,5 @@ EditorBuildSettings:
     path: Assets/Scenes/MainSceneV2.unity
     guid: fc9e44b711a418d42a040569b5ee2c4a
   - enabled: 1
-    path: Assets/Scenes/FlashbackSceneV2.unity
+    path: Assets/Scenes/MenuSceneV2.unity
     guid: 46e3f6631118df14cb697124f771cc6d
