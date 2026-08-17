@@ -1,5 +1,4 @@
 param(
-    [Parameter(Mandatory = $true)]
     [string]$ProjectRoot
 )
 
@@ -7,12 +6,20 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $cliProject = Join-Path $repoRoot 'tools\ccgs-cli\Ccgs.Cli.csproj'
 $expectedPath = Join-Path $repoRoot 'tools\project-scanner\tests\golden-project.expected.json'
-$expected = Get-Content $expectedPath -Raw | ConvertFrom-Json
+$fixtureRoot = Join-Path $repoRoot 'tools\test-fixtures\golden-project'
+
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ProjectRoot = $fixtureRoot
+    Write-Host "Using deterministic golden fixture: $ProjectRoot"
+} else {
+    Write-Host "Using explicit project override: $ProjectRoot"
+}
 
 if (-not (Test-Path $ProjectRoot -PathType Container)) {
     throw "Project root does not exist: $ProjectRoot"
 }
 
+$expected = Get-Content $expectedPath -Raw | ConvertFrom-Json
 $json = dotnet run --project $cliProject -- analyze $ProjectRoot | ConvertFrom-Json
 
 function Assert-Equal($name, $actual, $expectedValue) {
