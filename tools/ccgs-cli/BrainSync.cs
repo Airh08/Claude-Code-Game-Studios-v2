@@ -159,6 +159,16 @@ public static class BrainSync
                 continue;
             }
 
+            if (line.StartsWith("    ", StringComparison.Ordinal))
+            {
+                if (inHistory)
+                {
+                    // A four-space field after history ends the history block.
+                    inHistory = false;
+                    historyEntry = null;
+                }
+            }
+
             if (!line.StartsWith("    ", StringComparison.Ordinal))
             {
                 inHistory = false;
@@ -171,7 +181,15 @@ public static class BrainSync
                 continue;
 
             var field = line[4..fieldSeparator];
-            var fieldValue = Unquote(line[(fieldSeparator + 1)..].Trim());
+            var rawValue = line[(fieldSeparator + 1)..].Trim();
+            if (field == "history")
+            {
+                ReadLegacyHistory(rawValue, current);
+                inHistory = false;
+                continue;
+            }
+
+            var fieldValue = Unquote(rawValue);
             switch (field)
             {
                 case "code": current.Code = fieldValue; break;
@@ -182,7 +200,6 @@ public static class BrainSync
                 case "observed_at_utc": current.LastObservedAtUtc = fieldValue; break;
                 case "resolved_at_utc": current.ResolvedAtUtc = fieldValue; break;
                 case "source": current.Source = fieldValue; break;
-                case "history": inHistory = true; break;
             }
         }
 
@@ -190,6 +207,33 @@ public static class BrainSync
             result[current.Id] = current;
 
         return result;
+    }
+
+    private static void ReadLegacyHistory(string rawValue, BrainIssue issue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue) || rawValue == "[]")
+            return;
+
+        var value = Unquote(rawValue);
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                return;
+
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                var status = item.TryGetProperty("Status", out var statusValue) ? statusValue.GetString() ?? string.Empty : string.Empty;
+                var atUtc = item.TryGetProperty("AtUtc", out var atUtcValue) ? atUtcValue.GetString() ?? string.Empty : string.Empty;
+                var source = item.TryGetProperty("Source", out var sourceValue) ? sourceValue.GetString() ?? string.Empty : string.Empty;
+                if (!string.IsNullOrWhiteSpace(status))
+                    issue.History.Add(new HistoryEntry(status, atUtc, source));
+            }
+        }
+        catch (JsonException)
+        {
+            // Keep the issue usable even if an older history value is malformed.
+        }
     }
 
     private static void WriteIssues(string file, IEnumerable<BrainIssue> issues)
