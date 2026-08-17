@@ -1,5 +1,4 @@
 param(
-    [Parameter(Mandatory = $true)]
     [string]$ProjectRoot
 )
 
@@ -7,6 +6,14 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $scannerProject = Join-Path $repoRoot 'tools\project-scanner\ProjectScanner.csproj'
 $expectedPath = Join-Path $PSScriptRoot 'golden-project.expected.json'
+$fixtureRoot = Join-Path $repoRoot 'tools\test-fixtures\golden-project'
+
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ProjectRoot = $fixtureRoot
+    Write-Host "Using deterministic golden fixture: $ProjectRoot"
+} else {
+    Write-Host "Using explicit project override: $ProjectRoot"
+}
 
 if (-not (Test-Path $ProjectRoot -PathType Container)) {
     throw "Project root does not exist: $ProjectRoot"
