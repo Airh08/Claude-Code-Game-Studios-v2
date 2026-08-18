@@ -74,17 +74,17 @@ A fresh analysis can populate Brain, a task can be created and tracked, evidence
 
 - [x] Define task schema.
 - [ ] Define agent capability schema.
-- [ ] Define routing rules.
-- [ ] Map health issue codes to capabilities.
-- [ ] Map natural-language task categories to capabilities.
-- [ ] Implement smallest-useful-team selection.
-- [ ] Support single-agent tasks.
-- [ ] Support multi-agent tasks.
-- [ ] Explain routing decisions.
+- [x] Define routing rules.
+- [x] Map health issue codes to capabilities.
+- [x] Map natural-language task categories to capabilities.
+- [x] Implement smallest-useful-team selection.
+- [x] Support single-agent tasks.
+- [x] Support multi-agent tasks.
+- [x] Explain routing decisions.
 - [ ] Persist routing decisions in Brain.
-- [ ] Detect conflicts/unsupported tasks.
-- [ ] Add route command to CLI.
-- [ ] Add deterministic routing regression suite.
+- [x] Detect conflicts/unsupported tasks.
+- [x] Add route command to CLI.
+- [x] Add deterministic routing regression suite.
 
 ### Initial routing matrix
 
@@ -353,7 +353,7 @@ All steps pass on a clean checkout against a supported Unity project and the res
 | M0 | Repository / agent foundation | 🟢 Foundation exists |
 | M1 | Deterministic inspection + regression | 🟢 Implemented |
 | M2 | Durable Project Brain | 🟡 Core exists; execution memory remains |
-| M3 | Executable Task Router | 🔴 Next major implementation |
+| M3 | Executable Task Router | 🟡 Task model, deterministic rules, `ccgs route` implemented; Brain persistence of decisions and agent capability schema remain |
 | M4 | Agent execution contracts | 🔴 Pending |
 | M5 | End-to-end orchestration | 🔴 Pending |
 | M6 | Unity Editor validation | 🔴 Pending |
@@ -368,20 +368,20 @@ All steps pass on a clean checkout against a supported Unity project and the res
 
 **Do not add more specialist agents yet.** The repository already contains the initial specialist set. fileciteturn135file0L2-L3
 
-The next implementation should be **M3: Executable Task Router**, because it is the missing bridge between the existing Project Brain/analysis layer and the existing agent layer.
-
-The first vertical slice should be:
+The M3 vertical slice is implemented and passes deterministically:
 
 ```text
 ccgs analyze
     ↓
 Project Brain
     ↓
-ccgs route
+ccgs route (--task <id> or --issue <code>)
     ↓
 Task + selected agent(s)
     ↓
-structured routing artifact
+structured routing artifact (matched rule, rationale, subject facts)
 ```
 
-Once that works deterministically, build orchestration on top of it rather than expanding the agent count first.
+Remaining M3 follow-ups, not yet done: persist routing decisions in Project Brain, and a machine-readable agent capability schema (M4.3) so routing can read agent metadata instead of a hard-coded table.
+
+The next implementation should be **M4: Agent Execution Contracts**, because a routed task still cannot be handed to a specialist agent through a consistent input/output contract. Build orchestration (M5) on top of that rather than expanding the agent count first.

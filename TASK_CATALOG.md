@@ -100,26 +100,26 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 - **Done when:** Tasks can be serialized/deserialized deterministically. Covered by `tools/ccgs-cli/tests/run-task-model-test.ps1` (multi-item and empty list fields, unique IDs, LF-only output, repeated-read determinism).
 
 ## M3.2 Routing rules
-- [ ] Define routing rules mapping task characteristics to agents.
-- **Description:** Use deterministic rules before LLM reasoning where possible.
+- [x] Define routing rules mapping task characteristics to agents.
+- **Description:** Use deterministic rules before LLM reasoning where possible. Implemented as `TaskRouter` (`tools/ccgs-cli/TaskRouter.cs`): `RouteIssueCode` maps known health issue codes (`BUILD-001`, `INPUT-001`, `TEST-001`, `PROJECT-001`) to primary/supporting agents per the ROADMAP routing matrix; `RouteTask` maps task `type` (`ui`, `technical-art`, `testing`, `design`, `content`, `analysis`) to agents, honoring an explicit `--agent` assignment first. Unmatched codes/types deliberately return no agent rather than guessing.
 - **Dependencies:** M3.1.
-- **Done when:** Representative tasks route to predictable primary/supporting agents.
+- **Done when:** Representative tasks route to predictable primary/supporting agents. Covered by `tools/ccgs-cli/tests/run-routing-rules-test.ps1`.
 
 ## M3.3 Router CLI
-- [ ] Implement `ccgs route`.
-- **Description:** Read a task or Brain issue, resolve the appropriate agent(s), and emit a routing artifact.
+- [x] Implement `ccgs route`.
+- **Description:** Read a task or Brain issue, resolve the appropriate agent(s), and emit a routing artifact. `ccgs route <project-root> --task <id>` reads `project-brain/tasks.yaml`; `ccgs route <project-root> --issue <code>` routes a bare issue code. Routing decisions are not yet persisted back into Project Brain (open follow-up).
 - **Dependencies:** M3.1–M3.2.
 - **Done when:** A task can be routed without manually inspecting agent files.
 
 ## M3.4 Routing explanation
-- [ ] Record why an agent was selected.
-- **Description:** Routing should be observable and auditable rather than a black box.
+- [x] Record why an agent was selected.
+- **Description:** Routing should be observable and auditable rather than a black box. The routing artifact includes `MatchedRule`, `Rationale`, and `SubjectFacts` (the task's objective/type/priority, or the issue code) alongside `PrimaryAgent`/`SupportingAgents`.
 - **Dependencies:** M3.3.
 - **Done when:** Output contains matched rules, relevant project facts, and selected agents.
 
 ## M3.5 Router regression suite
-- [ ] Add deterministic routing tests.
-- **Description:** Prevent changes to agent definitions or routing rules from silently changing assignments.
+- [x] Add deterministic routing tests.
+- **Description:** Prevent changes to agent definitions or routing rules from silently changing assignments. `tools/ccgs-cli/tests/run-routing-rules-test.ps1` covers every known issue code, every mapped task type, explicit-agent override, unmatched fallback (both issue and task), and the missing-task error path. CI wiring for the full regression suite is still open (Phase 1 / M11.1).
 - **Dependencies:** M3.3.
 - **Done when:** Golden routing cases pass in CI.
 

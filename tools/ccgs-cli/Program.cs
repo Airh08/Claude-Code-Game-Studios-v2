@@ -27,6 +27,9 @@ switch (command)
     case "task":
         RunTask(args, pretty);
         break;
+    case "route":
+        RunRoute(args, projectRoot, pretty);
+        break;
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
         PrintHelp();
@@ -123,6 +126,65 @@ static void RunTask(string[] args, bool pretty)
     }
 }
 
+static void RunRoute(string[] args, string root, bool pretty)
+{
+    ValidateProjectRoot(root);
+    var issueCode = GetValue(args, "--issue");
+    var taskId = GetValue(args, "--task");
+
+    if (string.IsNullOrWhiteSpace(issueCode) && string.IsNullOrWhiteSpace(taskId))
+    {
+        Console.Error.WriteLine("Provide --issue <code> or --task <task-id>.");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    RoutingDecision decision;
+    string subjectType;
+    string subjectId;
+    var subjectFacts = new Dictionary<string, string>();
+
+    if (!string.IsNullOrWhiteSpace(taskId))
+    {
+        var tasks = TaskStore.Load(Path.Combine(root, "project-brain"));
+        var task = tasks.FirstOrDefault(t => string.Equals(t.Id, taskId, StringComparison.OrdinalIgnoreCase));
+        if (task is null)
+        {
+            Console.Error.WriteLine($"Task not found: {taskId}");
+            Environment.ExitCode = 1;
+            return;
+        }
+        decision = TaskRouter.RouteTask(task);
+        subjectType = "task";
+        subjectId = task.Id;
+        subjectFacts["objective"] = task.Objective;
+        subjectFacts["type"] = task.Type;
+        subjectFacts["priority"] = task.Priority;
+    }
+    else
+    {
+        decision = TaskRouter.RouteIssueCode(issueCode!);
+        subjectType = "issue";
+        subjectId = issueCode!;
+        subjectFacts["code"] = issueCode!;
+    }
+
+    var artifact = new RoutingArtifact
+    {
+        SubjectType = subjectType,
+        SubjectId = subjectId,
+        SubjectFacts = subjectFacts,
+        PrimaryAgent = decision.PrimaryAgent,
+        SupportingAgents = decision.SupportingAgents.ToList(),
+        MatchedRule = decision.MatchedRule,
+        Rationale = decision.Rationale,
+        GeneratedAtUtc = DateTime.UtcNow.ToString("O")
+    };
+
+    var options = new JsonSerializerOptions { WriteIndented = pretty, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    Console.WriteLine(JsonSerializer.Serialize(artifact, options));
+}
+
 static List<string> GetValues(string[] args, string flag)
 {
     var values = new List<string>();
@@ -197,6 +259,7 @@ static void PrintHelp()
     Console.WriteLine("  analyze       Run inspection and produce a structured health report");
     Console.WriteLine("  task create   Persist a new task to <project>/project-brain/tasks.yaml");
     Console.WriteLine("  task list     List tasks persisted in <project>/project-brain/tasks.yaml");
+    Console.WriteLine("  route         Resolve the agent(s) for a task or Brain issue code");
     Console.WriteLine("Options:");
     Console.WriteLine("  --sync-brain  Persist observed analysis into <project>/project-brain");
     Console.WriteLine("Task create options:");
@@ -208,6 +271,9 @@ static void PrintHelp()
     Console.WriteLine("  --constraint \"...\"    Constraint (repeatable)");
     Console.WriteLine("  --depends-on <id>     Dependency task id (repeatable)");
     Console.WriteLine("  --validation \"...\"    Validation requirement (repeatable)");
+    Console.WriteLine("Route options:");
+    Console.WriteLine("  --task <task-id>      Route an existing task from project-brain/tasks.yaml");
+    Console.WriteLine("  --issue <code>        Route a Brain health issue code (e.g. BUILD-001)");
 }
 
 public sealed class AnalysisReport
@@ -218,4 +284,16 @@ public sealed class AnalysisReport
     public HealthReport Health { get; set; } = new();
     public List<string> Recommendations { get; set; } = new();
     public string? BrainPath { get; set; }
+}
+
+public sealed class RoutingArtifact
+{
+    public string SubjectType { get; set; } = string.Empty;
+    public string SubjectId { get; set; } = string.Empty;
+    public Dictionary<string, string> SubjectFacts { get; set; } = new();
+    public string? PrimaryAgent { get; set; }
+    public List<string> SupportingAgents { get; set; } = new();
+    public string MatchedRule { get; set; } = string.Empty;
+    public string Rationale { get; set; } = string.Empty;
+    public string GeneratedAtUtc { get; set; } = string.Empty;
 }

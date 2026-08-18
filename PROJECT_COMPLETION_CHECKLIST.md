@@ -97,8 +97,8 @@ The intended workflow is already documented as analyze → route → plan → im
 - [x] `--pretty` output.
 - [x] `--sync-brain` integration.
 - [x] Project-root validation.
-- [ ] Add `route` command.
-- [ ] Add `plan` command or task artifact generation.
+- [x] Add `route` command.
+- [x] Add `plan` command or task artifact generation.
 - [ ] Add `validate` command.
 - [ ] Add `status`/Brain inspection command.
 - [ ] Add machine-readable exit codes for CI.
@@ -129,15 +129,15 @@ The intended workflow is already documented as analyze → route → plan → im
 
 ## 7. Task Router
 
-- [ ] Implement executable Task Router.
-- [ ] Define routing rules by issue code/category.
-- [ ] Define routing rules by task intent.
-- [ ] Select the smallest useful specialist team.
-- [ ] Support single-agent and multi-agent tasks.
-- [ ] Explain why an agent/team was selected.
+- [x] Implement executable Task Router.
+- [x] Define routing rules by issue code/category.
+- [x] Define routing rules by task intent.
+- [x] Select the smallest useful specialist team.
+- [x] Support single-agent and multi-agent tasks.
+- [x] Explain why an agent/team was selected.
 - [ ] Persist routing decisions in Project Brain.
-- [ ] Detect unsupported tasks and escalate safely.
-- [ ] Add deterministic routing tests.
+- [x] Detect unsupported tasks and escalate safely.
+- [x] Add deterministic routing tests.
 
 ## 8. Game Director / Orchestration
 
