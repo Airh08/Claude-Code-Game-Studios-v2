@@ -24,3 +24,7 @@ Every validation report should state:
 - what passed
 - what failed
 - what remains unverified
+
+## Contract
+
+Follows `.claude/rules/agents.md`. The five points above map onto the shared output schema: "what/how" become `evidence` entries, "what passed/failed" become `tests`, and "what remains unverified" becomes `unresolved_risks` — do not collapse a failing or unverified case into `status: completed`.

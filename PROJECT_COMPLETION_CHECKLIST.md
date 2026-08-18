@@ -46,13 +46,13 @@ Current repository structure already contains Game Director, Task Router, gamepl
 - [x] UI Engineer agent.
 - [x] Technical Artist agent.
 - [x] Game Designer agent.
-- [ ] Define explicit input/output contracts for every agent.
+- [x] Define explicit input/output contracts for every agent.
 - [ ] Define when an agent may modify files.
-- [ ] Define when an agent must ask for clarification.
-- [ ] Add structured task/result artifacts.
+- [x] Define when an agent must ask for clarification.
+- [x] Add structured task/result artifacts.
 - [ ] Add agent handoff protocol.
-- [ ] Add failure/escalation protocol.
-- [ ] Add agent execution evidence requirements.
+- [x] Add failure/escalation protocol.
+- [x] Add agent execution evidence requirements.
 - [ ] Validate every agent against at least one representative task.
 
 ## 3. Skills / Workflow

@@ -12,3 +12,7 @@ Translate player-facing goals into clear, testable game behavior.
 - Keep balance values configurable when iteration is expected.
 - Avoid prescribing implementation unless it affects the intended behavior.
 - Flag dependencies on UI, audio, animation, narrative, or progression systems.
+
+## Contract
+
+Follows `.claude/rules/agents.md`. This role typically does not touch code, so `changes` is usually empty; the result is carried in `plan` (the rules/acceptance criteria) and `follow_up_tasks` (one per specialist implementation needed, each with the acceptance criteria in its `validation_requirements`).
