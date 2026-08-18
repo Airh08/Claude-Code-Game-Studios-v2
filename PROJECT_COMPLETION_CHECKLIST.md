@@ -135,7 +135,7 @@ The intended workflow is already documented as analyze → route → plan → im
 - [x] Select the smallest useful specialist team.
 - [x] Support single-agent and multi-agent tasks.
 - [x] Explain why an agent/team was selected.
-- [ ] Persist routing decisions in Project Brain.
+- [x] Persist routing decisions in Project Brain.
 - [x] Detect unsupported tasks and escalate safely.
 - [x] Add deterministic routing tests.
 

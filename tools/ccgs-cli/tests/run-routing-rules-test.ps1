@@ -38,12 +38,17 @@ function Create-Task([string[]]$taskArgs) {
     dotnet run --project $cliProject -- task create $ProjectRoot @taskArgs | ConvertFrom-Json
 }
 
+function Invoke-List {
+    dotnet run --project $cliProject -- task list $ProjectRoot | ConvertFrom-Json
+}
+
 try {
     # Issue-code routing: known codes must be predictable.
     $build = Route-Issue 'BUILD-001'
     Assert-Equal 'BUILD-001.PrimaryAgent' $build.PrimaryAgent 'unity-engineer'
     Assert-Equal 'BUILD-001.SupportingAgents[0]' $build.SupportingAgents[0] 'qa-engineer'
     Assert-Equal 'BUILD-001.MatchedRule' $build.MatchedRule 'issue-code:BUILD-001'
+    Assert-Equal 'BUILD-001.PersistedToBrain' $build.PersistedToBrain $false
 
     $input = Route-Issue 'INPUT-001'
     Assert-Equal 'INPUT-001.PrimaryAgent' $input.PrimaryAgent 'unity-engineer'
@@ -66,6 +71,22 @@ try {
     Assert-Equal 'ui.SubjectFacts.type' $uiRoute.SubjectFacts.type 'ui'
     Assert-Equal 'ui.SubjectFacts.objective' $uiRoute.SubjectFacts.objective 'Build main menu'
     Write-Host 'PASS routing artifact carries the underlying task facts (type, objective)'
+
+    # Routing a task must persist the decision into project-brain/tasks.yaml, not just print it.
+    Assert-Equal 'ui.PersistedToBrain' $uiRoute.PersistedToBrain $true
+    $persistedUi = @(Invoke-List) | Where-Object { $_.Id -eq $uiTask.Id }
+    Assert-Equal 'persisted.RoutedAgent' $persistedUi.RoutedAgent 'ui-engineer'
+    Assert-Equal 'persisted.RoutedSupportingAgents[0]' $persistedUi.RoutedSupportingAgents[0] 'gameplay-programmer'
+    Assert-Equal 'persisted.RoutingRule' $persistedUi.RoutingRule 'task-type:ui'
+    if ([string]::IsNullOrWhiteSpace($persistedUi.RoutedAtUtc)) { throw 'Persisted task is missing routed_at_utc.' }
+    Write-Host 'PASS routing decision is persisted into project-brain/tasks.yaml'
+
+    # Re-routing must update the persisted decision in place, not duplicate the task.
+    Start-Sleep -Milliseconds 5
+    Route-Task $uiTask.Id | Out-Null
+    $afterSecondRoute = @(Invoke-List)
+    Assert-Equal 'afterSecondRoute.Count' $afterSecondRoute.Count 1
+    Write-Host 'PASS re-routing a task updates it in place instead of duplicating it'
 
     $techArtTask = Create-Task @('--objective', 'Author hero shader', '--type', 'technical-art')
     $techArtRoute = Route-Task $techArtTask.Id

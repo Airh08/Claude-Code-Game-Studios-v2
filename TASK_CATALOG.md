@@ -96,7 +96,7 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 ## M3.1 Task model
 - [x] Define a canonical task schema.
 - **Description:** Represent task ID, objective, type, priority, affected paths, constraints, dependencies, assigned agent, status, and validation requirements. Implemented as `BrainTask`/`TaskStore` (`tools/ccgs-cli/TaskStore.cs`), persisted to `project-brain/tasks.yaml`, exposed via `ccgs task create`/`ccgs task list`.
-- **Dependencies:** M2.1, M2.6.
+- **Dependencies:** M2.1. (Originally listed M2.6 as well; `TaskStore` reads/writes `tasks.yaml` directly and did not need a general Brain query API to be implementable. M2.6 remains valuable for later milestones that need richer cross-artifact queries.)
 - **Done when:** Tasks can be serialized/deserialized deterministically. Covered by `tools/ccgs-cli/tests/run-task-model-test.ps1` (multi-item and empty list fields, unique IDs, LF-only output, repeated-read determinism).
 
 ## M3.2 Routing rules
@@ -107,7 +107,7 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 
 ## M3.3 Router CLI
 - [x] Implement `ccgs route`.
-- **Description:** Read a task or Brain issue, resolve the appropriate agent(s), and emit a routing artifact. `ccgs route <project-root> --task <id>` reads `project-brain/tasks.yaml`; `ccgs route <project-root> --issue <code>` routes a bare issue code. Routing decisions are not yet persisted back into Project Brain (open follow-up).
+- **Description:** Read a task or Brain issue, resolve the appropriate agent(s), and emit a routing artifact. `ccgs route <project-root> --task <id>` reads `project-brain/tasks.yaml` and persists the decision (`routed_agent`, `routed_supporting_agents`, `routing_rule`, `routing_rationale`, `routed_at_utc`) back into the task record; re-routing updates it in place rather than duplicating it. `ccgs route <project-root> --issue <code>` routes a bare issue code and is intentionally not persisted, since a bare issue code has no Brain-resident task record to attach the decision to.
 - **Dependencies:** M3.1–M3.2.
 - **Done when:** A task can be routed without manually inspecting agent files.
 
@@ -121,7 +121,7 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 - [x] Add deterministic routing tests.
 - **Description:** Prevent changes to agent definitions or routing rules from silently changing assignments. `tools/ccgs-cli/tests/run-routing-rules-test.ps1` covers every known issue code, every mapped task type, explicit-agent override, unmatched fallback (both issue and task), and the missing-task error path. CI wiring for the full regression suite is still open (Phase 1 / M11.1).
 - **Dependencies:** M3.3.
-- **Done when:** Golden routing cases pass in CI.
+- **Done when:** Golden routing cases pass deterministically. (CI execution of the suite is tracked separately under M11.1; it does not run in CI yet.)
 
 ---
 

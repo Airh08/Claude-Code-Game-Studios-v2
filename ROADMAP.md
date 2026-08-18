@@ -49,8 +49,9 @@ Recent work also hardened the regression layer: the checked-in golden fixture wa
 - [ ] Finalize Brain schema v3.
 - [ ] Add schema migration infrastructure.
 - [ ] Add architecture entities/systems.
-- [ ] Add active task records.
-- [ ] Add task ownership and status.
+- [x] Add active task records.
+- [x] Add task ownership.
+- [ ] Add task execution status.
 - [ ] Add validation evidence records.
 - [ ] Add ADR records.
 - [ ] Add failure-memory records.
@@ -76,12 +77,12 @@ A fresh analysis can populate Brain, a task can be created and tracked, evidence
 - [ ] Define agent capability schema.
 - [x] Define routing rules.
 - [x] Map health issue codes to capabilities.
-- [x] Map natural-language task categories to capabilities.
+- [x] Map structured task categories to capabilities. (Routes on the controlled `task.type` vocabulary set at creation time, e.g. `ui`/`technical-art`/`testing`; free-text objective/intent classification is not implemented and remains future work.)
 - [x] Implement smallest-useful-team selection.
 - [x] Support single-agent tasks.
 - [x] Support multi-agent tasks.
 - [x] Explain routing decisions.
-- [ ] Persist routing decisions in Brain.
+- [x] Persist routing decisions in Brain.
 - [x] Detect conflicts/unsupported tasks.
 - [x] Add route command to CLI.
 - [x] Add deterministic routing regression suite.
@@ -353,7 +354,7 @@ All steps pass on a clean checkout against a supported Unity project and the res
 | M0 | Repository / agent foundation | 🟢 Foundation exists |
 | M1 | Deterministic inspection + regression | 🟢 Implemented |
 | M2 | Durable Project Brain | 🟡 Core exists; execution memory remains |
-| M3 | Executable Task Router | 🟡 Task model, deterministic rules, `ccgs route` implemented; Brain persistence of decisions and agent capability schema remain |
+| M3 | Executable Task Router | 🟢 Task model, deterministic rules, `ccgs route`, and Brain-persisted decisions implemented; agent capability schema (M4.3) remains |
 | M4 | Agent execution contracts | 🔴 Pending |
 | M5 | End-to-end orchestration | 🔴 Pending |
 | M6 | Unity Editor validation | 🔴 Pending |
@@ -380,8 +381,10 @@ ccgs route (--task <id> or --issue <code>)
 Task + selected agent(s)
     ↓
 structured routing artifact (matched rule, rationale, subject facts)
+    ↓
+persisted into project-brain/tasks.yaml (routed_agent, routing_rule, rationale, routed_at_utc) when routing a task
 ```
 
-Remaining M3 follow-ups, not yet done: persist routing decisions in Project Brain, and a machine-readable agent capability schema (M4.3) so routing can read agent metadata instead of a hard-coded table.
+M3 is complete. The one remaining follow-up is a machine-readable agent capability schema (M4.3) so routing can read agent metadata instead of a hard-coded table — that belongs to M4, not M3.
 
 The next implementation should be **M4: Agent Execution Contracts**, because a routed task still cannot be handed to a specialist agent through a consistent input/output contract. Build orchestration (M5) on top of that rather than expanding the agent count first.

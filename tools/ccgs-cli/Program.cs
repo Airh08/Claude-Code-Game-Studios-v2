@@ -143,10 +143,13 @@ static void RunRoute(string[] args, string root, bool pretty)
     string subjectType;
     string subjectId;
     var subjectFacts = new Dictionary<string, string>();
+    string generatedAtUtc;
+    bool persisted;
 
     if (!string.IsNullOrWhiteSpace(taskId))
     {
-        var tasks = TaskStore.Load(Path.Combine(root, "project-brain"));
+        var brainDir = Path.Combine(root, "project-brain");
+        var tasks = TaskStore.Load(brainDir);
         var task = tasks.FirstOrDefault(t => string.Equals(t.Id, taskId, StringComparison.OrdinalIgnoreCase));
         if (task is null)
         {
@@ -160,6 +163,10 @@ static void RunRoute(string[] args, string root, bool pretty)
         subjectFacts["objective"] = task.Objective;
         subjectFacts["type"] = task.Type;
         subjectFacts["priority"] = task.Priority;
+
+        var routed = TaskStore.SaveRouting(brainDir, task.Id, decision);
+        generatedAtUtc = routed.RoutedAtUtc!;
+        persisted = true;
     }
     else
     {
@@ -167,6 +174,8 @@ static void RunRoute(string[] args, string root, bool pretty)
         subjectType = "issue";
         subjectId = issueCode!;
         subjectFacts["code"] = issueCode!;
+        generatedAtUtc = DateTime.UtcNow.ToString("O");
+        persisted = false;
     }
 
     var artifact = new RoutingArtifact
@@ -178,7 +187,8 @@ static void RunRoute(string[] args, string root, bool pretty)
         SupportingAgents = decision.SupportingAgents.ToList(),
         MatchedRule = decision.MatchedRule,
         Rationale = decision.Rationale,
-        GeneratedAtUtc = DateTime.UtcNow.ToString("O")
+        PersistedToBrain = persisted,
+        GeneratedAtUtc = generatedAtUtc
     };
 
     var options = new JsonSerializerOptions { WriteIndented = pretty, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -272,8 +282,8 @@ static void PrintHelp()
     Console.WriteLine("  --depends-on <id>     Dependency task id (repeatable)");
     Console.WriteLine("  --validation \"...\"    Validation requirement (repeatable)");
     Console.WriteLine("Route options:");
-    Console.WriteLine("  --task <task-id>      Route an existing task from project-brain/tasks.yaml");
-    Console.WriteLine("  --issue <code>        Route a Brain health issue code (e.g. BUILD-001)");
+    Console.WriteLine("  --task <task-id>      Route an existing task from project-brain/tasks.yaml (persists the decision back into the task record)");
+    Console.WriteLine("  --issue <code>        Route a Brain health issue code (e.g. BUILD-001); not persisted, no task record to attach it to");
 }
 
 public sealed class AnalysisReport
@@ -295,5 +305,6 @@ public sealed class RoutingArtifact
     public List<string> SupportingAgents { get; set; } = new();
     public string MatchedRule { get; set; } = string.Empty;
     public string Rationale { get; set; } = string.Empty;
+    public bool PersistedToBrain { get; set; }
     public string GeneratedAtUtc { get; set; } = string.Empty;
 }

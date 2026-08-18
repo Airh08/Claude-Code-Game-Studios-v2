@@ -18,6 +18,11 @@ public sealed class BrainTask
     public string CreatedAtUtc { get; set; } = string.Empty;
     public string UpdatedAtUtc { get; set; } = string.Empty;
     public string Source { get; set; } = "user";
+    public string? RoutedAgent { get; set; }
+    public List<string> RoutedSupportingAgents { get; set; } = new();
+    public string? RoutingRule { get; set; }
+    public string? RoutingRationale { get; set; }
+    public string? RoutedAtUtc { get; set; }
 }
 
 public sealed record TaskCreateRequest(
@@ -33,7 +38,7 @@ public sealed record TaskCreateRequest(
 
 public static class TaskStore
 {
-    private static readonly string[] ListFields = { "affected_paths", "constraints", "dependencies", "validation_requirements" };
+    private static readonly string[] ListFields = { "affected_paths", "constraints", "dependencies", "validation_requirements", "routed_supporting_agents" };
 
     public static BrainTask Create(string brainDir, TaskCreateRequest request)
     {
@@ -70,6 +75,25 @@ public static class TaskStore
         return File.Exists(file) ? Read(File.ReadAllLines(file)) : new List<BrainTask>();
     }
 
+    public static BrainTask SaveRouting(string brainDir, string taskId, RoutingDecision decision)
+    {
+        var file = Path.Combine(brainDir, "tasks.yaml");
+        var tasks = File.Exists(file) ? Read(File.ReadAllLines(file)) : new List<BrainTask>();
+        var task = tasks.FirstOrDefault(t => string.Equals(t.Id, taskId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Task not found: {taskId}");
+
+        var now = DateTime.UtcNow.ToString("O");
+        task.RoutedAgent = decision.PrimaryAgent;
+        task.RoutedSupportingAgents = decision.SupportingAgents.ToList();
+        task.RoutingRule = decision.MatchedRule;
+        task.RoutingRationale = decision.Rationale;
+        task.RoutedAtUtc = now;
+        task.UpdatedAtUtc = now;
+
+        Write(file, tasks);
+        return task;
+    }
+
     private static void Write(string file, IEnumerable<BrainTask> tasks)
     {
         var builder = new StringBuilder("schema_version: 1\ntasks:\n");
@@ -89,6 +113,15 @@ public static class TaskStore
             AppendLine(builder, $"    created_at_utc: \"{task.CreatedAtUtc}\"");
             AppendLine(builder, $"    updated_at_utc: \"{task.UpdatedAtUtc}\"");
             AppendLine(builder, $"    source: {task.Source}");
+            if (!string.IsNullOrWhiteSpace(task.RoutedAtUtc))
+            {
+                if (!string.IsNullOrWhiteSpace(task.RoutedAgent))
+                    AppendLine(builder, $"    routed_agent: {task.RoutedAgent}");
+                WriteList(builder, "routed_supporting_agents", task.RoutedSupportingAgents);
+                AppendLine(builder, $"    routing_rule: {task.RoutingRule}");
+                AppendLine(builder, $"    routing_rationale: \"{Yaml(task.RoutingRationale ?? string.Empty)}\"");
+                AppendLine(builder, $"    routed_at_utc: \"{task.RoutedAtUtc}\"");
+            }
         }
         File.WriteAllText(file, builder.ToString());
     }
@@ -168,6 +201,10 @@ public static class TaskStore
                 case "created_at_utc": current.CreatedAtUtc = fieldValue; break;
                 case "updated_at_utc": current.UpdatedAtUtc = fieldValue; break;
                 case "source": current.Source = fieldValue; break;
+                case "routed_agent": current.RoutedAgent = fieldValue; break;
+                case "routing_rule": current.RoutingRule = fieldValue; break;
+                case "routing_rationale": current.RoutingRationale = fieldValue; break;
+                case "routed_at_utc": current.RoutedAtUtc = fieldValue; break;
             }
         }
 
@@ -183,6 +220,7 @@ public static class TaskStore
         "constraints" => task.Constraints,
         "dependencies" => task.Dependencies,
         "validation_requirements" => task.ValidationRequirements,
+        "routed_supporting_agents" => task.RoutedSupportingAgents,
         _ => throw new InvalidOperationException($"Unknown list field: {field}")
     };
 

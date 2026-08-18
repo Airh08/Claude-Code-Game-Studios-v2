@@ -35,4 +35,8 @@ AI-assisted game development framework for Unity 6.x, designed around project aw
 
 ## Current status
 
-Foundation / MVP. The repository contains the core agent, router, skill, rules, memory, and project-brain structures. The next milestone is executable Unity project inspection and validation.
+Foundation and deterministic inspection are implemented and regression-tested: the project scanner, `ccgs analyze`, and Project Brain issue persistence (stable IDs, `open -> resolved -> reopened` lifecycle, structured history) all pass against a checked-in golden fixture.
+
+The Task Router is now executable: `ccgs task create`/`ccgs task list` persist a canonical task schema to `project-brain/tasks.yaml`, and `ccgs route --task <id>` / `--issue <code>` resolves primary/supporting agents through deterministic rules (not an LLM), recording the matched rule and rationale.
+
+See `ROADMAP.md` for the phased plan, `TASK_CATALOG.md` for the exact status of every implementation unit, and `PROJECT_COMPLETION_CHECKLIST.md` for what must still exist before CCGS v2 is considered complete. The next milestone is Agent Execution Contracts (M4): a consistent input/output contract so a routed task can actually be handed to a specialist agent.
