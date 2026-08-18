@@ -94,10 +94,10 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 # M3 — Task Router
 
 ## M3.1 Task model
-- [ ] Define a canonical task schema.
-- **Description:** Represent task ID, objective, type, priority, affected paths, constraints, dependencies, assigned agent, status, and validation requirements.
+- [x] Define a canonical task schema.
+- **Description:** Represent task ID, objective, type, priority, affected paths, constraints, dependencies, assigned agent, status, and validation requirements. Implemented as `BrainTask`/`TaskStore` (`tools/ccgs-cli/TaskStore.cs`), persisted to `project-brain/tasks.yaml`, exposed via `ccgs task create`/`ccgs task list`.
 - **Dependencies:** M2.1, M2.6.
-- **Done when:** Tasks can be serialized/deserialized deterministically.
+- **Done when:** Tasks can be serialized/deserialized deterministically. Covered by `tools/ccgs-cli/tests/run-task-model-test.ps1` (multi-item and empty list fields, unique IDs, LF-only output, repeated-read determinism).
 
 ## M3.2 Routing rules
 - [ ] Define routing rules mapping task characteristics to agents.

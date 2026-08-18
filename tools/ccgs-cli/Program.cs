@@ -24,6 +24,9 @@ switch (command)
     case "analyze":
         RunAnalyze(projectRoot, pretty, syncBrain);
         break;
+    case "task":
+        RunTask(args, pretty);
+        break;
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
         PrintHelp();
@@ -67,6 +70,71 @@ static void RunAnalyze(string root, bool pretty, bool syncBrain)
 
     Console.WriteLine(JsonSerializer.Serialize(report, options));
 }
+
+static void RunTask(string[] args, bool pretty)
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("Usage: ccgs task <create|list> <unity-project-root> [options]");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var subcommand = args[1].ToLowerInvariant();
+    var root = Path.GetFullPath(args[2]);
+    ValidateProjectRoot(root);
+    var brainDir = Path.Combine(root, "project-brain");
+
+    switch (subcommand)
+    {
+        case "create":
+            var objective = GetValue(args, "--objective");
+            if (string.IsNullOrWhiteSpace(objective))
+            {
+                Console.Error.WriteLine("--objective is required.");
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var request = new TaskCreateRequest(
+                Objective: objective,
+                Type: GetValue(args, "--type") ?? "implementation",
+                Priority: GetValue(args, "--priority") ?? "medium",
+                AssignedAgent: GetValue(args, "--agent"),
+                AffectedPaths: GetValues(args, "--path"),
+                Constraints: GetValues(args, "--constraint"),
+                Dependencies: GetValues(args, "--depends-on"),
+                ValidationRequirements: GetValues(args, "--validation"),
+                Source: GetValue(args, "--source") ?? "user");
+
+            var created = TaskStore.Create(brainDir, request);
+            var createOptions = new JsonSerializerOptions { WriteIndented = pretty };
+            Console.WriteLine(JsonSerializer.Serialize(created, createOptions));
+            break;
+        case "list":
+            var tasks = TaskStore.Load(brainDir);
+            var listOptions = new JsonSerializerOptions { WriteIndented = pretty };
+            Console.WriteLine(JsonSerializer.Serialize(tasks, listOptions));
+            break;
+        default:
+            Console.Error.WriteLine($"Unknown task subcommand: {subcommand}");
+            Environment.ExitCode = 1;
+            break;
+    }
+}
+
+static List<string> GetValues(string[] args, string flag)
+{
+    var values = new List<string>();
+    for (var i = 0; i < args.Length - 1; i++)
+    {
+        if (string.Equals(args[i], flag, StringComparison.OrdinalIgnoreCase))
+            values.Add(args[i + 1]);
+    }
+    return values;
+}
+
+static string? GetValue(string[] args, string flag) => GetValues(args, flag).FirstOrDefault();
 
 static List<string> BuildRecommendations(JsonElement scan)
 {
@@ -125,10 +193,21 @@ static void PrintHelp()
     Console.WriteLine("CCGS CLI");
     Console.WriteLine("Usage: ccgs <command> <unity-project-root> [--pretty] [--sync-brain]");
     Console.WriteLine("Commands:");
-    Console.WriteLine("  scan     Run deterministic filesystem inspection");
-    Console.WriteLine("  analyze  Run inspection and produce a structured health report");
+    Console.WriteLine("  scan          Run deterministic filesystem inspection");
+    Console.WriteLine("  analyze       Run inspection and produce a structured health report");
+    Console.WriteLine("  task create   Persist a new task to <project>/project-brain/tasks.yaml");
+    Console.WriteLine("  task list     List tasks persisted in <project>/project-brain/tasks.yaml");
     Console.WriteLine("Options:");
     Console.WriteLine("  --sync-brain  Persist observed analysis into <project>/project-brain");
+    Console.WriteLine("Task create options:");
+    Console.WriteLine("  --objective \"...\"    Required. What the task must accomplish.");
+    Console.WriteLine("  --type <type>         analysis|design|implementation|debugging|refactor|content|ui|technical-art|testing|production (default: implementation)");
+    Console.WriteLine("  --priority <priority> low|medium|high|critical (default: medium)");
+    Console.WriteLine("  --agent <name>        Assigned specialist agent");
+    Console.WriteLine("  --path <path>         Affected path (repeatable)");
+    Console.WriteLine("  --constraint \"...\"    Constraint (repeatable)");
+    Console.WriteLine("  --depends-on <id>     Dependency task id (repeatable)");
+    Console.WriteLine("  --validation \"...\"    Validation requirement (repeatable)");
 }
 
 public sealed class AnalysisReport

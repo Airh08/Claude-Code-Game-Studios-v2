@@ -72,7 +72,7 @@ A fresh analysis can populate Brain, a task can be created and tracked, evidence
 
 ### Tasks
 
-- [ ] Define task schema.
+- [x] Define task schema.
 - [ ] Define agent capability schema.
 - [ ] Define routing rules.
 - [ ] Map health issue codes to capabilities.
