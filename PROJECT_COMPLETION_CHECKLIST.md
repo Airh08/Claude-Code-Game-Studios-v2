@@ -118,7 +118,7 @@ The intended workflow is already documented as analyze → route → plan → im
 - [x] History migration from legacy embedded JSON.
 - [x] Repeated sync persistence regression test.
 - [ ] Persist architecture/system entities beyond the initial scaffold.
-- [ ] Persist active tasks and ownership.
+- [x] Persist active tasks and ownership.
 - [ ] Persist task execution status.
 - [ ] Persist validation evidence.
 - [ ] Persist ADRs.
