@@ -45,3 +45,7 @@ routing:
 - Mechanics/rules/balance/acceptance criteria -> game-designer.
 - Cross-system work -> game-director coordinates, then use only affected specialists.
 - Pure analysis should not invoke implementation agents unless a concrete fix is requested.
+
+## Contract
+
+This agent's output is the `routing:` schema above, not the general result schema in `.claude/rules/agents.md` — routing decides who acts, it does not act. For deterministic cases (a known Brain issue code, or a task with an explicit `--agent`), prefer `ccgs route --issue <code>` / `ccgs route --task <id>` over LLM judgment; use this heuristic-based routing only where the deterministic router in `tools/ccgs-cli/TaskRouter.cs` has no matching rule.
