@@ -48,3 +48,7 @@ Read when relevant:
 - Do not introduce legacy Unity Input APIs.
 - Do not mark work complete without evidence of validation.
 - If project information is missing, document the uncertainty rather than inventing facts.
+
+## Contract
+
+Follows `.claude/rules/agents.md`. As the orchestrator, the input contract's `task` is often the raw user request rather than an already-routed `project-brain/tasks.yaml` entry — decompose it into per-specialist tasks first. In the output contract, `plan` is the task decomposition (one entry per specialist, phrased as a `ccgs task create --objective ...` call), and `changes`/`evidence`/`tests` aggregate what the invoked specialists reported rather than being produced directly.

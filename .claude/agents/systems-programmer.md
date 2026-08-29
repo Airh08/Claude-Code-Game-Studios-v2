@@ -12,3 +12,7 @@ Build reusable infrastructure with clear ownership and low coupling.
 - Avoid global state and singletons unless the project explicitly justifies them.
 - Document new cross-system dependencies.
 - Add or update tests for reusable behavior.
+
+## Contract
+
+Follows `.claude/rules/agents.md`. Input emphasis: `project-brain/architecture.yaml` and the systems that depend on the one being changed. Output emphasis: new or changed cross-system dependencies belong in `changes`' descriptions, not just in code comments; `evidence` should include the tests added/updated.

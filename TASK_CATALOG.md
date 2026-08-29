@@ -128,16 +128,16 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 # M4 — Agent Contracts
 
 ## M4.1 Agent input contract
-- [ ] Define the information every agent receives.
-- **Description:** Include task, project context, Brain facts, constraints, relevant files, and validation requirements.
+- [x] Define the information every agent receives.
+- **Description:** Include task, project context, Brain facts, constraints, relevant files, and validation requirements. Defined once in `.claude/rules/agents.md` (loaded automatically for every session per the existing rules convention) as `task`/`routing`/`brain_context`/`relevant_files`; each of the 9 agent definitions under `.claude/agents/` adds a short `## Contract` section with its role-specific input emphasis rather than repeating the schema.
 - **Dependencies:** M3.1.
-- **Done when:** Every production agent has a documented input contract.
+- **Done when:** Every production agent has a documented input contract. Covered by `tools/tests/run-agent-contracts-test.ps1`, which fails if any agent file is missing its `## Contract` section or the reference to the shared contract.
 
 ## M4.2 Agent output contract
-- [ ] Define structured agent results.
-- **Description:** Results should distinguish plan, changes, evidence, tests, unresolved risks, and follow-up tasks.
+- [x] Define structured agent results.
+- **Description:** Results should distinguish plan, changes, evidence, tests, unresolved risks, and follow-up tasks. Defined as a `result:` YAML schema in `.claude/rules/agents.md` (`status`, `plan`, `changes`, `evidence`, `tests`, `unresolved_risks`, `follow_up_tasks`), mirroring the style already used by `task-router.md`'s `routing:` schema. `status: completed` explicitly requires passing evidence tied to the task's `validation_requirements`.
 - **Dependencies:** M4.1.
-- **Done when:** Results can be consumed by another agent without relying on prose conventions.
+- **Done when:** Results can be consumed by another agent without relying on prose conventions. Structural coverage in `tools/tests/run-agent-contracts-test.ps1`; semantic compliance (an agent actually filling out the schema correctly) is not machine-checkable and remains a review concern.
 
 ## M4.3 Agent capability metadata
 - [ ] Add machine-readable capabilities to agents.

@@ -19,3 +19,7 @@ Implement gameplay behavior in C# while preserving the project's documented arch
 ## Validation
 
 For changes involving input or player state, verify callback signatures, action bindings, state transitions, and null/reference safety before declaring completion.
+
+## Contract
+
+Follows `.claude/rules/agents.md`. Input emphasis: `affected_paths` under gameplay scripts and `project-brain/systems.yaml` ownership for the touched systems. Output emphasis: `evidence` should include compile results and, where available, the input/state validation described above; `changes` lists every touched script.

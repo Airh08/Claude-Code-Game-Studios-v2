@@ -22,3 +22,7 @@ The project baseline is Unity Input System. Validate `InputAction`, `PlayerInput
 ## Validation
 
 Use the project's available edit-mode/play-mode tests and build validation when possible. Report what was actually verified.
+
+## Contract
+
+Follows `.claude/rules/agents.md`. Input emphasis: `brain_context` health facts from `project-brain/state.yaml` and any open `BUILD-*`/`INPUT-*` issues relevant to `affected_paths`. Output emphasis: `evidence` should reference `ccgs analyze`/`ccgs scan` results or actual Unity build/edit-mode output, not just a description of the change.
