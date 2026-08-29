@@ -140,16 +140,16 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 - **Done when:** Results can be consumed by another agent without relying on prose conventions. Structural coverage in `tools/tests/run-agent-contracts-test.ps1`; semantic compliance (an agent actually filling out the schema correctly) is not machine-checkable and remains a review concern.
 
 ## M4.3 Agent capability metadata
-- [ ] Add machine-readable capabilities to agents.
-- **Description:** Describe domains, tools, read/write scope, supported task types, and required validators.
+- [x] Add machine-readable capabilities to agents.
+- **Description:** Describe domains, tools, read/write scope, supported task types, and required validators. Implemented as `.claude/agents/capabilities.json` (schema: `agents[]` with `role`, `domains`, `supported_task_types`, `read_write_scope`, `required_validators`; `issue_code_rules[]` and `task_type_rules[]` with `primary`/`supporting`/`rationale`), loaded via `AgentCapabilities.Load()` (`tools/ccgs-cli/AgentCapabilities.cs`) and exposed through `ccgs agents list [--role specialist|orchestration]`.
 - **Dependencies:** M4.1–M4.2.
-- **Done when:** Task Router can select agents from metadata rather than hard-coded names alone.
+- **Done when:** Task Router can select agents from metadata rather than hard-coded names alone. `TaskRouter.RouteIssueCode`/`RouteTask` (`tools/ccgs-cli/TaskRouter.cs`) now look up `issue_code_rules`/`task_type_rules` from the loaded registry instead of a C# `switch`; behavior is unchanged (verified by the existing `run-routing-rules-test.ps1` still passing byte-for-byte), and referential/vocabulary integrity between the registry and the actual agent files is covered by `tools/tests/run-agent-capabilities-test.ps1`.
 
 ## M4.4 Agent validation requirements
-- [ ] Define per-agent completion criteria.
-- **Description:** For example, gameplay changes may require compile checks, Unity scene validation, and targeted tests.
+- [x] Define per-agent completion criteria.
+- **Description:** For example, gameplay changes may require compile checks, Unity scene validation, and targeted tests. Each agent's `required_validators` in `capabilities.json` (e.g. `unity-engineer`: `scan`, `build`; `qa-engineer`: `test`; `ui-engineer`/`technical-artist`: `manual-verification`) names the `evidence.type` values expected for that domain, wired into the Output Contract's `status: completed` rule in `.claude/rules/agents.md`.
 - **Dependencies:** M4.2.
-- **Done when:** An agent cannot report success without producing required evidence.
+- **Done when:** An agent cannot report success without producing required evidence. This is a documented/data-level requirement, not a runtime-enforced one — there is no execution engine yet (M5) to reject a non-compliant report. `tools/tests/run-agent-capabilities-test.ps1` guards the data itself: every `required_validators` value must be one of the documented `evidence.type` values, so the two cannot silently drift apart.
 
 ---
 

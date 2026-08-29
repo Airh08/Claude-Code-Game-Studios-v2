@@ -47,7 +47,7 @@ Current repository structure already contains Game Director, Task Router, gamepl
 - [x] Technical Artist agent.
 - [x] Game Designer agent.
 - [x] Define explicit input/output contracts for every agent.
-- [ ] Define when an agent may modify files.
+- [x] Define when an agent may modify files. (Agent-level `read_write_scope` in `.claude/agents/capabilities.json`; not yet path-granular — see M9.1.)
 - [x] Define when an agent must ask for clarification.
 - [x] Add structured task/result artifacts.
 - [ ] Add agent handoff protocol.
