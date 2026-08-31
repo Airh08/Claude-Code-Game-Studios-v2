@@ -13,7 +13,7 @@ $contractFile = Join-Path $repoRoot '.claude\rules\agents.md'
 if (-not (Test-Path $contractFile -PathType Leaf)) { throw "Missing shared agent contract: $contractFile" }
 
 $contractText = Get-Content $contractFile -Raw
-foreach ($heading in @('## Input Contract', '## Output Contract', '## Escalation')) {
+foreach ($heading in @('## Input Contract', '## Output Contract', '## Escalation', '## Execution Lifecycle')) {
     if ($contractText -notmatch [regex]::Escape($heading)) { throw "$contractFile is missing required heading: $heading" }
 }
 Write-Host "PASS $contractFile defines Input Contract, Output Contract, and Escalation"

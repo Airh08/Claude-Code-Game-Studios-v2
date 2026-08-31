@@ -122,6 +122,59 @@ static void RunTask(string[] args, bool pretty)
             var listOptions = new JsonSerializerOptions { WriteIndented = pretty };
             Console.WriteLine(JsonSerializer.Serialize(tasks, listOptions));
             break;
+        case "start":
+        case "complete":
+        case "fail":
+        case "block":
+            if (args.Length < 4)
+            {
+                Console.Error.WriteLine($"Usage: ccgs task {subcommand} <unity-project-root> <task-id> [options]");
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var taskId = args[3];
+            var summary = GetValue(args, "--summary");
+            var evidence = GetValues(args, "--evidence");
+            BrainTask transitioned;
+
+            switch (subcommand)
+            {
+                case "start":
+                    transitioned = TaskStore.StartExecution(brainDir, taskId);
+                    break;
+                case "complete":
+                    if (string.IsNullOrWhiteSpace(summary))
+                    {
+                        Console.Error.WriteLine("--summary is required.");
+                        Environment.ExitCode = 1;
+                        return;
+                    }
+                    transitioned = TaskStore.CompleteExecution(brainDir, taskId, summary, evidence);
+                    break;
+                case "fail":
+                    if (string.IsNullOrWhiteSpace(summary))
+                    {
+                        Console.Error.WriteLine("--summary is required.");
+                        Environment.ExitCode = 1;
+                        return;
+                    }
+                    transitioned = TaskStore.FailExecution(brainDir, taskId, summary, evidence);
+                    break;
+                default:
+                    if (string.IsNullOrWhiteSpace(summary))
+                    {
+                        Console.Error.WriteLine("--summary is required.");
+                        Environment.ExitCode = 1;
+                        return;
+                    }
+                    transitioned = TaskStore.BlockExecution(brainDir, taskId, summary);
+                    break;
+            }
+
+            var transitionOptions = new JsonSerializerOptions { WriteIndented = pretty };
+            Console.WriteLine(JsonSerializer.Serialize(transitioned, transitionOptions));
+            break;
         default:
             Console.Error.WriteLine($"Unknown task subcommand: {subcommand}");
             Environment.ExitCode = 1;
@@ -291,6 +344,10 @@ static void PrintHelp()
     Console.WriteLine("  analyze       Run inspection and produce a structured health report");
     Console.WriteLine("  task create   Persist a new task to <project>/project-brain/tasks.yaml");
     Console.WriteLine("  task list     List tasks persisted in <project>/project-brain/tasks.yaml");
+    Console.WriteLine("  task start    Move a routed task to execution_status=executing");
+    Console.WriteLine("  task complete Move an executing task to execution_status=completed (requires passing evidence)");
+    Console.WriteLine("  task fail     Move an executing task to execution_status=failed");
+    Console.WriteLine("  task block    Move a task to execution_status=blocked (from not-started or executing)");
     Console.WriteLine("  route         Resolve the agent(s) for a task or Brain issue code");
     Console.WriteLine("  agents list   List agent capability metadata from .claude/agents/capabilities.json");
     Console.WriteLine("Options:");
@@ -304,6 +361,10 @@ static void PrintHelp()
     Console.WriteLine("  --constraint \"...\"    Constraint (repeatable)");
     Console.WriteLine("  --depends-on <id>     Dependency task id (repeatable)");
     Console.WriteLine("  --validation \"...\"    Validation requirement (repeatable)");
+    Console.WriteLine("Task start/complete/fail/block usage:");
+    Console.WriteLine("  ccgs task <start|complete|fail|block> <unity-project-root> <task-id> [options]");
+    Console.WriteLine("  --summary \"...\"       Required for complete/fail/block.");
+    Console.WriteLine("  --evidence type:result  Repeatable, e.g. build:pass. complete requires at least one *:pass entry.");
     Console.WriteLine("Route options:");
     Console.WriteLine("  --task <task-id>      Route an existing task from project-brain/tasks.yaml (persists the decision back into the task record)");
     Console.WriteLine("  --issue <code>        Route a Brain health issue code (e.g. BUILD-001); not persisted, no task record to attach it to");

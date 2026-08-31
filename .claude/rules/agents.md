@@ -46,3 +46,26 @@ result:
 ## Escalation
 
 If a required input is missing, the task is outside the agent's domain, or repeated attempts fail, report `status: blocked` with the reason in `summary` rather than guessing or expanding scope beyond the task.
+
+## Execution Lifecycle
+
+There is no separate orchestration service in this repository — the "engine" is the Claude Code session itself (typically `game-director`) driving `ccgs task`/`ccgs route` and invoking specialist agents directly. The lifecycle:
+
+```text
+ccgs task create --objective "..." [--agent <name>]
+    ↓
+ccgs route --task <id>              (skip if --agent was given explicitly)
+    ↓
+ccgs task start <task-id>           (requires the task to be routed; fails otherwise)
+    ↓
+invoke the routed primary agent (and any supporting agents) with the Input Contract above
+    ↓
+ccgs task complete <task-id> --summary "..." --evidence <type>:pass [--evidence <type>:pass ...]
+  or ccgs task fail <task-id> --summary "..." [--evidence <type>:fail ...]
+  or ccgs task block <task-id> --summary "..."
+```
+
+- `ccgs task start` only succeeds once the task has a `routed_agent` (from `ccgs route` or an explicit `--agent` at creation). This is what "invoking the routed agent" means concretely: the CLI records that execution began before the agent does any work, so an interrupted session leaves a visible `executing` state instead of silence.
+- `ccgs task complete` enforces the Output Contract's evidence rule at the CLI level: it rejects completion without at least one `--evidence <type>:pass` entry. Use the `type` values from the agent's `required_validators` in `.claude/agents/capabilities.json` (e.g. `unity-engineer` → `scan`/`build`).
+- A `failed` or `blocked` task can be restarted with `ccgs task start` (it clears the prior summary/evidence); a `completed` task cannot — treat redoing completed work as a new task.
+- This is bounded-retry-free by design: nothing here limits how many times a task can be restarted or escalates automatically after repeated failures. That is M5.4, not this.

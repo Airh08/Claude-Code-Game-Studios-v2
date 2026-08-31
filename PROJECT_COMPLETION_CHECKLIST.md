@@ -119,8 +119,8 @@ The intended workflow is already documented as analyze → route → plan → im
 - [x] Repeated sync persistence regression test.
 - [ ] Persist architecture/system entities beyond the initial scaffold.
 - [x] Persist active tasks and ownership.
-- [ ] Persist task execution status.
-- [ ] Persist validation evidence.
+- [x] Persist task execution status. (`execution_status`: `executing`/`completed`/`failed`/`blocked`, M5.1.)
+- [x] Persist validation evidence. (`execution_evidence` on the task record, M5.1.)
 - [ ] Persist ADRs.
 - [ ] Persist failure memory.
 - [ ] Add schema/version migration framework.
@@ -153,16 +153,16 @@ The intended workflow is already documented as analyze → route → plan → im
 
 ## 9. Agent Execution
 
-- [ ] Establish a standard task contract.
-- [ ] Establish a standard completion contract.
-- [ ] Require agents to inspect relevant Brain state first.
-- [ ] Require agents to inspect affected Unity assets before modification.
-- [ ] Require minimal-scope changes.
-- [ ] Capture changed files.
-- [ ] Capture commands/tests executed.
-- [ ] Capture validation evidence.
-- [ ] Record failures and recovery actions.
-- [ ] Support safe retry.
+- [x] Establish a standard task contract. (`.claude/rules/agents.md` Input Contract, M4.1.)
+- [x] Establish a standard completion contract. (Output Contract, M4.2, enforced at the CLI level by `ccgs task complete`'s evidence gate since M5.1.)
+- [x] Require agents to inspect relevant Brain state first. (Input Contract's `brain_context`; predates this specific checklist line but was never marked.)
+- [x] Require agents to inspect affected Unity assets before modification. (Input Contract's `relevant_files`, plus `CLAUDE.md`/`.claude/rules/architecture.md` "inspect before modifying.")
+- [x] Require minimal-scope changes. (`CLAUDE.md`: "a bug fix doesn't need surrounding cleanup"; individual agent rules such as gameplay-programmer's "avoid unnecessary coupling.")
+- [x] Capture changed files. (Output Contract `changes`, M4.2.)
+- [x] Capture commands/tests executed. (Output Contract `evidence`/`tests`, M4.2; `ccgs task start/complete/fail/block` persist this into Brain since M5.1.)
+- [x] Capture validation evidence. (Same as above — `execution_evidence` on the task record.)
+- [ ] Record failures and recovery actions. (`ccgs task fail` records the failure and its evidence/summary; there is no distinct recovery-action record or attempt history yet — that's M5.3.)
+- [ ] Support safe retry. (`ccgs task start` allows restarting a `failed`/`blocked` task, but nothing bounds retry count or prevents loops — that's M5.4.)
 
 ## 10. Unity Integration
 
