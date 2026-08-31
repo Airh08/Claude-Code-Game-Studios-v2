@@ -30,6 +30,9 @@ switch (command)
     case "route":
         RunRoute(args, projectRoot, pretty);
         break;
+    case "agents":
+        RunAgents(args, pretty);
+        break;
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
         PrintHelp();
@@ -195,6 +198,25 @@ static void RunRoute(string[] args, string root, bool pretty)
     Console.WriteLine(JsonSerializer.Serialize(artifact, options));
 }
 
+static void RunAgents(string[] args, bool pretty)
+{
+    if (args.Length < 2 || !string.Equals(args[1], "list", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine("Usage: ccgs agents list [--role specialist|orchestration] [--pretty]");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var registry = AgentCapabilities.Load();
+    var role = GetValue(args, "--role");
+    var agents = string.IsNullOrWhiteSpace(role)
+        ? registry.Agents
+        : registry.Agents.Where(a => string.Equals(a.Role, role, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    var options = new JsonSerializerOptions { WriteIndented = pretty };
+    Console.WriteLine(JsonSerializer.Serialize(agents, options));
+}
+
 static List<string> GetValues(string[] args, string flag)
 {
     var values = new List<string>();
@@ -270,6 +292,7 @@ static void PrintHelp()
     Console.WriteLine("  task create   Persist a new task to <project>/project-brain/tasks.yaml");
     Console.WriteLine("  task list     List tasks persisted in <project>/project-brain/tasks.yaml");
     Console.WriteLine("  route         Resolve the agent(s) for a task or Brain issue code");
+    Console.WriteLine("  agents list   List agent capability metadata from .claude/agents/capabilities.json");
     Console.WriteLine("Options:");
     Console.WriteLine("  --sync-brain  Persist observed analysis into <project>/project-brain");
     Console.WriteLine("Task create options:");
@@ -284,6 +307,8 @@ static void PrintHelp()
     Console.WriteLine("Route options:");
     Console.WriteLine("  --task <task-id>      Route an existing task from project-brain/tasks.yaml (persists the decision back into the task record)");
     Console.WriteLine("  --issue <code>        Route a Brain health issue code (e.g. BUILD-001); not persisted, no task record to attach it to");
+    Console.WriteLine("Agents list options:");
+    Console.WriteLine("  --role <role>         Filter by role: specialist|orchestration");
 }
 
 public sealed class AnalysisReport

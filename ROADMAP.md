@@ -114,7 +114,7 @@ Given the same project state and task, the router chooses the same minimal team 
 
 - [x] Define common agent input contract.
 - [x] Define common agent output contract.
-- [ ] Define allowed file scope.
+- [x] Define allowed file scope. (Coarse-grained: `read_write_scope: read-write|read-only` per agent in `.claude/agents/capabilities.json`, e.g. `game-designer` is `read-only`. Path-level/granular permission enforcement is M9.1, not this.)
 - [x] Define required pre-change inspection. (Already established by `CLAUDE.md` principle 1 and `.claude/rules/architecture.md`; the new Input Contract makes it concrete per field: `brain_context` and `relevant_files` must be inspected before acting.)
 - [x] Define evidence requirements.
 - [ ] Define handoff format.
@@ -355,7 +355,7 @@ All steps pass on a clean checkout against a supported Unity project and the res
 | M1 | Deterministic inspection + regression | 🟢 Implemented |
 | M2 | Durable Project Brain | 🟡 Core exists; execution memory remains |
 | M3 | Executable Task Router | 🟢 Task model, deterministic rules, `ccgs route`, and Brain-persisted decisions implemented; agent capability schema (M4.3) remains |
-| M4 | Agent execution contracts | 🟡 Input/output contract and escalation format defined for all 9 agents; file-scope permissions, handoff format, and per-agent execution tests remain |
+| M4 | Agent execution contracts | 🟡 Input/output contract, escalation format, and machine-readable capability metadata (domains, scope, required validators) done; handoff format, retry behavior, and per-agent execution tests remain |
 | M5 | End-to-end orchestration | 🔴 Pending |
 | M6 | Unity Editor validation | 🔴 Pending |
 | M7 | Gameplay Play Mode validation | 🔴 Pending |
@@ -385,6 +385,12 @@ structured routing artifact (matched rule, rationale, subject facts)
 persisted into project-brain/tasks.yaml (routed_agent, routing_rule, rationale, routed_at_utc) when routing a task
 ```
 
-M3 is complete. M4.1 (input contract) and M4.2 (output contract) are also complete: `.claude/rules/agents.md` defines the shared `task`/`routing`/`brain_context`/`relevant_files` input shape and the `result:` output schema (`status`, `plan`, `changes`, `evidence`, `tests`, `unresolved_risks`, `follow_up_tasks`), and all 9 agent definitions under `.claude/agents/` document their role-specific contract against it, checked by `tools/tests/run-agent-contracts-test.ps1`.
+M3 is complete. M4.1–M4.4 are also complete:
 
-The next implementation should be **M4.3: Agent capability metadata**, because `TaskRouter` (`tools/ccgs-cli/TaskRouter.cs`) still resolves agents from a hard-coded switch statement rather than reading machine-readable capability metadata (domains, tools, read/write scope, supported task types, required validators) from the agent definitions themselves. After that, M4.4 (per-agent validation requirements) and then M5 (orchestration) build on top — still no need to expand the agent count first.
+- `.claude/rules/agents.md` defines the shared `task`/`routing`/`brain_context`/`relevant_files` input shape and the `result:` output schema (`status`, `plan`, `changes`, `evidence`, `tests`, `unresolved_risks`, `follow_up_tasks`); all 9 agents document their role-specific contract against it (`tools/tests/run-agent-contracts-test.ps1`).
+- `.claude/agents/capabilities.json` gives every agent machine-readable `domains`, `supported_task_types`, `read_write_scope`, and `required_validators`, plus the `issue_code_rules`/`task_type_rules` tables. `TaskRouter` (`tools/ccgs-cli/TaskRouter.cs`) now resolves agents by reading this registry instead of a hard-coded `switch`, exposed via `ccgs agents list` and cross-checked for drift by `tools/tests/run-agent-capabilities-test.ps1`.
+- Each agent's `required_validators` is wired into the Output Contract's `status: completed` rule, naming the specific evidence expected per domain.
+
+What M4 does not yet have: a handoff format between agents (beyond `follow_up_tasks` becoming a new task), retry behavior, a requirement that agents update Brain, and a representative execution test per specialist agent — those stay open, tracked in `PROJECT_COMPLETION_CHECKLIST.md` and this phase's task list above.
+
+The next implementation should be **M5: End-to-End Orchestration**, because the pieces it needs already exist: a deterministic router (M3) and a documented, metadata-backed agent contract (M4). M5.1 (execution engine) is the natural first slice — converting a routing decision into an actual agent invocation while preserving the task/routing/brain_context handed to it. Still no need to expand the agent count first.

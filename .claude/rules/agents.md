@@ -38,6 +38,7 @@ result:
 ```
 
 - `status: completed` requires at least one `evidence` entry with `result: pass` relevant to the task's `validation_requirements`. Do not report `completed` on assertion alone — see `.claude/rules/testing.md`.
+- Each agent's `required_validators` entry in `.claude/agents/capabilities.json` names the specific `evidence.type` values expected for that agent's domain (for example `unity-engineer` needs `scan`/`build`; `qa-engineer` needs `test`; `ui-engineer`/`technical-artist` need `manual-verification` when no automated check exists). If a required validator could not be run, say so in `unresolved_risks` instead of omitting it — never report `completed` without covering it.
 - `follow_up_tasks` should be phrased so each one can become a `ccgs task create --objective "..."` call.
 - `unresolved_risks` exists so partial or uncertain work stays visible instead of being silently dropped.
 - An agent whose role does not produce file changes (for example `game-designer`) may leave `changes` empty and rely on `plan`/`follow_up_tasks` to carry the result.

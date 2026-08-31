@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "agents": [
+    {
+      "name": "unity-engineer",
+      "role": "specialist",
+      "domains": ["unity-architecture", "build-settings", "input-system", "packages", "scenes", "prefabs"],
+      "supported_task_types": ["implementation", "debugging", "refactor"],
+      "read_write_scope": "read-write",
+      "required_validators": ["scan", "build"]
+    },
+    {
+      "name": "gameplay-programmer",
+      "role": "specialist",
+      "domains": ["gameplay", "player", "combat", "interaction", "movement"],
+      "supported_task_types": ["implementation", "debugging", "refactor"],
+      "read_write_scope": "read-write",
+      "required_validators": ["build"]
+    },
+    {
+      "name": "systems-programmer",
+      "role": "specialist",
+      "domains": ["architecture", "infrastructure", "save-systems", "events", "state-machines"],
+      "supported_task_types": ["implementation", "refactor"],
+      "read_write_scope": "read-write",
+      "required_validators": ["build", "test"]
+    },
+    {
+      "name": "ui-engineer",
+      "role": "specialist",
+      "domains": ["ui", "hud", "menus", "navigation"],
+      "supported_task_types": ["ui"],
+      "read_write_scope": "read-write",
+      "required_validators": ["manual-verification"]
+    },
+    {
+      "name": "technical-artist",
+      "role": "specialist",
+      "domains": ["rendering", "shaders", "vfx", "animation-integration"],
+      "supported_task_types": ["technical-art"],
+      "read_write_scope": "read-write",
+      "required_validators": ["manual-verification"]
+    },
+    {
+      "name": "qa-engineer",
+      "role": "specialist",
+      "domains": ["testing", "regression", "acceptance-criteria"],
+      "supported_task_types": ["testing"],
+      "read_write_scope": "read-write",
+      "required_validators": ["test"]
+    },
+    {
+      "name": "game-designer",
+      "role": "specialist",
+      "domains": ["design", "balance", "rules", "acceptance-criteria", "content"],
+      "supported_task_types": ["design", "content"],
+      "read_write_scope": "read-only",
+      "required_validators": []
+    },
+    {
+      "name": "game-director",
+      "role": "orchestration",
+      "domains": ["orchestration", "cross-system"],
+      "supported_task_types": [],
+      "read_write_scope": "read-only",
+      "required_validators": []
+    },
+    {
+      "name": "task-router",
+      "role": "orchestration",
+      "domains": ["routing"],
+      "supported_task_types": [],
+      "read_write_scope": "read-only",
+      "required_validators": []
+    }
+  ],
+  "issue_code_rules": [
+    {
+      "code": "BUILD-001",
+      "primary": "unity-engineer",
+      "supporting": ["qa-engineer"],
+      "rationale": "Build Settings references an invalid scene path. Unity Engineer owns Build Settings; QA validates the fix."
+    },
+    {
+      "code": "INPUT-001",
+      "primary": "unity-engineer",
+      "supporting": ["gameplay-programmer"],
+      "rationale": "Input System callback configuration requires Unity Editor verification. Unity Engineer leads; Gameplay Programmer supports the affected interaction code."
+    },
+    {
+      "code": "TEST-001",
+      "primary": "qa-engineer",
+      "supporting": ["unity-engineer"],
+      "rationale": "No automated test coverage was discovered. QA owns establishing a baseline; Unity Engineer supports test infrastructure."
+    },
+    {
+      "code": "PROJECT-001",
+      "primary": "unity-engineer",
+      "supporting": [],
+      "rationale": "The directory is not recognized as a Unity project. Unity Engineer must verify the project root."
+    }
+  ],
+  "task_type_rules": [
+    {
+      "type": "ui",
+      "primary": "ui-engineer",
+      "supporting": ["gameplay-programmer"],
+      "rationale": "UI implementation tasks are owned by the UI Engineer, with Gameplay Programmer support for HUD/gameplay integration."
+    },
+    {
+      "type": "technical-art",
+      "primary": "technical-artist",
+      "supporting": ["unity-engineer"],
+      "rationale": "Technical art / asset pipeline tasks are owned by the Technical Artist, with Unity Engineer support for engine integration."
+    },
+    {
+      "type": "testing",
+      "primary": "qa-engineer",
+      "supporting": ["unity-engineer"],
+      "rationale": "Testing/regression tasks are owned by QA, with Unity Engineer support for environment or tooling issues."
+    },
+    {
+      "type": "design",
+      "primary": "game-designer",
+      "supporting": ["gameplay-programmer"],
+      "rationale": "Game rules/design tasks are owned by the Game Designer, with Gameplay Programmer support for feasibility."
+    },
+    {
+      "type": "content",
+      "primary": "game-designer",
+      "supporting": [],
+      "rationale": "Content tasks default to the Game Designer in the absence of a more specific domain signal."
+    },
+    {
+      "type": "analysis",
+      "primary": null,
+      "supporting": [],
+      "rationale": "Analysis tasks do not require a specialist agent unless a concrete fix is requested."
+    }
+  ]
+}
