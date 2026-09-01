@@ -156,10 +156,10 @@ This document expands the tasks referenced by `PROJECT_COMPLETION_CHECKLIST.md` 
 # M5 — Orchestration
 
 ## M5.1 Execution engine
-- [ ] Implement a controlled mechanism for invoking routed agents.
-- **Description:** Convert a routing decision into an actual agent execution while preserving context and artifacts.
+- [x] Implement a controlled mechanism for invoking routed agents.
+- **Description:** Convert a routing decision into an actual agent execution while preserving context and artifacts. There is no separate orchestration service in this repository (no server, no queue) — the "engine" is the Claude Code session (`game-director`) driving new `ccgs task start|complete|fail|block` transitions (`tools/ccgs-cli/TaskStore.cs`) around the actual invocation of a specialist agent. Documented as the Execution Lifecycle in `.claude/rules/agents.md`. `start` requires the task to already be routed (`routed_agent` set); `complete` enforces the Output Contract's evidence rule at the CLI level, rejecting completion without at least one `--evidence <type>:pass` entry; `failed`/`blocked` tasks can be restarted, `completed` tasks cannot.
 - **Dependencies:** M3.3, M4.1–M4.4.
-- **Done when:** A task can move from routed to executing to completed/failed state.
+- **Done when:** A task can move from routed to executing to completed/failed state. Covered by `tools/ccgs-cli/tests/run-task-execution-test.ps1` (unrouted-start rejection, evidence-gated completion, terminal-state guards, fail→restart, mid-execution block, and persistence through `ccgs task list`). This is per-task current-state only, not the full attempt history/recovery-action log M5.3 asks for — a restart overwrites the prior attempt's summary/evidence rather than preserving it.
 
 ## M5.2 Multi-agent coordination
 - [ ] Support primary and supporting agents.

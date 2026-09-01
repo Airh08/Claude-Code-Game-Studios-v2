@@ -23,6 +23,11 @@ public sealed class BrainTask
     public string? RoutingRule { get; set; }
     public string? RoutingRationale { get; set; }
     public string? RoutedAtUtc { get; set; }
+    public string? ExecutionStatus { get; set; }
+    public string? ExecutionStartedAtUtc { get; set; }
+    public string? ExecutionEndedAtUtc { get; set; }
+    public string? ExecutionSummary { get; set; }
+    public List<string> ExecutionEvidence { get; set; } = new();
 }
 
 public sealed record TaskCreateRequest(
@@ -38,7 +43,8 @@ public sealed record TaskCreateRequest(
 
 public static class TaskStore
 {
-    private static readonly string[] ListFields = { "affected_paths", "constraints", "dependencies", "validation_requirements", "routed_supporting_agents" };
+    private static readonly string[] ListFields = { "affected_paths", "constraints", "dependencies", "validation_requirements", "routed_supporting_agents", "execution_evidence" };
+    private static readonly string[] StartableFrom = { "failed", "blocked" };
 
     public static BrainTask Create(string brainDir, TaskCreateRequest request)
     {
@@ -77,10 +83,7 @@ public static class TaskStore
 
     public static BrainTask SaveRouting(string brainDir, string taskId, RoutingDecision decision)
     {
-        var file = Path.Combine(brainDir, "tasks.yaml");
-        var tasks = File.Exists(file) ? Read(File.ReadAllLines(file)) : new List<BrainTask>();
-        var task = tasks.FirstOrDefault(t => string.Equals(t.Id, taskId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"Task not found: {taskId}");
+        var (file, tasks, task) = LoadOne(brainDir, taskId);
 
         var now = DateTime.UtcNow.ToString("O");
         task.RoutedAgent = decision.PrimaryAgent;
@@ -92,6 +95,91 @@ public static class TaskStore
 
         Write(file, tasks);
         return task;
+    }
+
+    public static BrainTask StartExecution(string brainDir, string taskId)
+    {
+        var (file, tasks, task) = LoadOne(brainDir, taskId);
+
+        if (string.IsNullOrWhiteSpace(task.RoutedAgent))
+            throw new InvalidOperationException($"Task {taskId} has not been routed yet. Run 'ccgs route --task {taskId}' first.");
+        if (task.ExecutionStatus is not null && !StartableFrom.Contains(task.ExecutionStatus))
+            throw new InvalidOperationException($"Task {taskId} cannot start from execution status '{task.ExecutionStatus}'.");
+
+        var now = DateTime.UtcNow.ToString("O");
+        task.ExecutionStatus = "executing";
+        task.ExecutionStartedAtUtc = now;
+        task.ExecutionEndedAtUtc = null;
+        task.ExecutionSummary = null;
+        task.ExecutionEvidence = new List<string>();
+        task.UpdatedAtUtc = now;
+
+        Write(file, tasks);
+        return task;
+    }
+
+    public static BrainTask CompleteExecution(string brainDir, string taskId, string summary, IReadOnlyList<string> evidence)
+    {
+        var (file, tasks, task) = LoadOne(brainDir, taskId);
+
+        if (task.ExecutionStatus != "executing")
+            throw new InvalidOperationException($"Task {taskId} cannot be completed from execution status '{task.ExecutionStatus ?? "not-started"}'. Run 'ccgs task start' first.");
+        if (evidence.Count == 0 || !evidence.Any(e => e.EndsWith(":pass", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Completing a task requires at least one --evidence entry with result 'pass' (format type:result, e.g. build:pass).");
+
+        var now = DateTime.UtcNow.ToString("O");
+        task.ExecutionStatus = "completed";
+        task.ExecutionEndedAtUtc = now;
+        task.ExecutionSummary = summary;
+        task.ExecutionEvidence = evidence.ToList();
+        task.UpdatedAtUtc = now;
+
+        Write(file, tasks);
+        return task;
+    }
+
+    public static BrainTask FailExecution(string brainDir, string taskId, string summary, IReadOnlyList<string> evidence)
+    {
+        var (file, tasks, task) = LoadOne(brainDir, taskId);
+
+        if (task.ExecutionStatus != "executing")
+            throw new InvalidOperationException($"Task {taskId} cannot be failed from execution status '{task.ExecutionStatus ?? "not-started"}'. Run 'ccgs task start' first.");
+
+        var now = DateTime.UtcNow.ToString("O");
+        task.ExecutionStatus = "failed";
+        task.ExecutionEndedAtUtc = now;
+        task.ExecutionSummary = summary;
+        task.ExecutionEvidence = evidence.ToList();
+        task.UpdatedAtUtc = now;
+
+        Write(file, tasks);
+        return task;
+    }
+
+    public static BrainTask BlockExecution(string brainDir, string taskId, string summary)
+    {
+        var (file, tasks, task) = LoadOne(brainDir, taskId);
+
+        if (task.ExecutionStatus == "completed")
+            throw new InvalidOperationException($"Task {taskId} is already completed and cannot be blocked.");
+
+        var now = DateTime.UtcNow.ToString("O");
+        task.ExecutionStatus = "blocked";
+        task.ExecutionEndedAtUtc = now;
+        task.ExecutionSummary = summary;
+        task.UpdatedAtUtc = now;
+
+        Write(file, tasks);
+        return task;
+    }
+
+    private static (string File, List<BrainTask> Tasks, BrainTask Task) LoadOne(string brainDir, string taskId)
+    {
+        var file = Path.Combine(brainDir, "tasks.yaml");
+        var tasks = File.Exists(file) ? Read(File.ReadAllLines(file)) : new List<BrainTask>();
+        var task = tasks.FirstOrDefault(t => string.Equals(t.Id, taskId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Task not found: {taskId}");
+        return (file, tasks, task);
     }
 
     private static void Write(string file, IEnumerable<BrainTask> tasks)
@@ -121,6 +209,17 @@ public static class TaskStore
                 AppendLine(builder, $"    routing_rule: {task.RoutingRule}");
                 AppendLine(builder, $"    routing_rationale: \"{Yaml(task.RoutingRationale ?? string.Empty)}\"");
                 AppendLine(builder, $"    routed_at_utc: \"{task.RoutedAtUtc}\"");
+            }
+            if (!string.IsNullOrWhiteSpace(task.ExecutionStatus))
+            {
+                AppendLine(builder, $"    execution_status: {task.ExecutionStatus}");
+                if (!string.IsNullOrWhiteSpace(task.ExecutionStartedAtUtc))
+                    AppendLine(builder, $"    execution_started_at_utc: \"{task.ExecutionStartedAtUtc}\"");
+                if (!string.IsNullOrWhiteSpace(task.ExecutionEndedAtUtc))
+                    AppendLine(builder, $"    execution_ended_at_utc: \"{task.ExecutionEndedAtUtc}\"");
+                if (!string.IsNullOrWhiteSpace(task.ExecutionSummary))
+                    AppendLine(builder, $"    execution_summary: \"{Yaml(task.ExecutionSummary ?? string.Empty)}\"");
+                WriteList(builder, "execution_evidence", task.ExecutionEvidence);
             }
         }
         File.WriteAllText(file, builder.ToString());
@@ -205,6 +304,10 @@ public static class TaskStore
                 case "routing_rule": current.RoutingRule = fieldValue; break;
                 case "routing_rationale": current.RoutingRationale = fieldValue; break;
                 case "routed_at_utc": current.RoutedAtUtc = fieldValue; break;
+                case "execution_status": current.ExecutionStatus = fieldValue; break;
+                case "execution_started_at_utc": current.ExecutionStartedAtUtc = fieldValue; break;
+                case "execution_ended_at_utc": current.ExecutionEndedAtUtc = fieldValue; break;
+                case "execution_summary": current.ExecutionSummary = fieldValue; break;
             }
         }
 
@@ -221,6 +324,7 @@ public static class TaskStore
         "dependencies" => task.Dependencies,
         "validation_requirements" => task.ValidationRequirements,
         "routed_supporting_agents" => task.RoutedSupportingAgents,
+        "execution_evidence" => task.ExecutionEvidence,
         _ => throw new InvalidOperationException($"Unknown list field: {field}")
     };
 

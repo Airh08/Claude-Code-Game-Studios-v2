@@ -52,3 +52,5 @@ Read when relevant:
 ## Contract
 
 Follows `.claude/rules/agents.md`. As the orchestrator, the input contract's `task` is often the raw user request rather than an already-routed `project-brain/tasks.yaml` entry — decompose it into per-specialist tasks first. In the output contract, `plan` is the task decomposition (one entry per specialist, phrased as a `ccgs task create --objective ...` call), and `changes`/`evidence`/`tests` aggregate what the invoked specialists reported rather than being produced directly.
+
+You are the one who drives the Execution Lifecycle in `.claude/rules/agents.md`: create each per-specialist task, route it (or assign explicitly), run `ccgs task start` before invoking that specialist, and record `ccgs task complete`/`fail`/`block` from what the specialist actually reported — do not mark a task `complete` yourself without the evidence the specialist produced.

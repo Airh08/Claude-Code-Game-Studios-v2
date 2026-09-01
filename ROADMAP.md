@@ -166,15 +166,15 @@ Final evidence/report
 ### Tasks
 
 - [ ] Implement task decomposition.
-- [ ] Implement dependency-aware task plans.
+- [ ] Implement dependency-aware task plans. (`Dependencies` exist on a task since M3.1, but nothing yet blocks `ccgs task start` on an incomplete dependency.)
 - [ ] Implement agent handoffs.
-- [ ] Track task state.
+- [x] Track task state. (`execution_status`: `executing` → `completed`/`failed`/`blocked`, via `ccgs task start|complete|fail|block`.)
 - [ ] Prevent conflicting concurrent edits.
-- [ ] Collect command/test evidence.
+- [x] Collect command/test evidence. (`execution_evidence`, gated: `ccgs task complete` rejects completion without a passing entry.)
 - [ ] Feed failures into `/fix`.
 - [ ] Require `/review` before completion for code-changing tasks.
-- [ ] Persist final state in Brain.
-- [ ] Add end-to-end orchestration test.
+- [x] Persist final state in Brain. (`completed`/`failed`/`blocked` persist in `project-brain/tasks.yaml`, not just CLI stdout.)
+- [ ] Add end-to-end orchestration test. (The state machine itself has regression coverage — `run-task-execution-test.ps1` — but nothing yet exercises a full request → Game Director → Router → live specialist invocation → Brain loop; that needs an actual agent invocation, not a deterministic script.)
 
 ### Exit criteria
 
@@ -354,9 +354,9 @@ All steps pass on a clean checkout against a supported Unity project and the res
 | M0 | Repository / agent foundation | 🟢 Foundation exists |
 | M1 | Deterministic inspection + regression | 🟢 Implemented |
 | M2 | Durable Project Brain | 🟡 Core exists; execution memory remains |
-| M3 | Executable Task Router | 🟢 Task model, deterministic rules, `ccgs route`, and Brain-persisted decisions implemented; agent capability schema (M4.3) remains |
-| M4 | Agent execution contracts | 🟡 Input/output contract, escalation format, and machine-readable capability metadata (domains, scope, required validators) done; handoff format, retry behavior, and per-agent execution tests remain |
-| M5 | End-to-end orchestration | 🔴 Pending |
+| M3 | Executable Task Router | 🟢 Complete: task model, deterministic rules, `ccgs route`, Brain-persisted decisions |
+| M4 | Agent execution contracts | 🟢 Input/output contract, escalation format, and machine-readable capability metadata (domains, scope, required validators) done; handoff format, retry behavior, and per-agent execution tests remain |
+| M5 | End-to-end orchestration | 🟡 M5.1 execution engine (`ccgs task start/complete/fail/block`, evidence-gated) implemented; task decomposition, dependency-aware scheduling, multi-agent handoffs, and a live end-to-end test remain |
 | M6 | Unity Editor validation | 🔴 Pending |
 | M7 | Gameplay Play Mode validation | 🔴 Pending |
 | M8 | ADR / failure memory | 🔴 Pending |
@@ -393,4 +393,21 @@ M3 is complete. M4.1–M4.4 are also complete:
 
 What M4 does not yet have: a handoff format between agents (beyond `follow_up_tasks` becoming a new task), retry behavior, a requirement that agents update Brain, and a representative execution test per specialist agent — those stay open, tracked in `PROJECT_COMPLETION_CHECKLIST.md` and this phase's task list above.
 
-The next implementation should be **M5: End-to-End Orchestration**, because the pieces it needs already exist: a deterministic router (M3) and a documented, metadata-backed agent contract (M4). M5.1 (execution engine) is the natural first slice — converting a routing decision into an actual agent invocation while preserving the task/routing/brain_context handed to it. Still no need to expand the agent count first.
+M5.1 is also complete. There is no separate orchestration service — the Execution Lifecycle in `.claude/rules/agents.md` has the Claude Code session itself (`game-director`) drive it:
+
+```text
+ccgs task create --objective "..." [--agent <name>]
+    ↓
+ccgs route --task <id>                     (skip if --agent was given explicitly)
+    ↓
+ccgs task start <task-id>                  (fails if the task isn't routed yet)
+    ↓
+invoke the routed agent(s) with the Input Contract
+    ↓
+ccgs task complete --evidence <type>:pass  (rejected without at least one passing evidence entry)
+  or ccgs task fail / ccgs task block
+```
+
+`failed`/`blocked` tasks can restart with `ccgs task start`; `completed` ones cannot. Covered by `tools/ccgs-cli/tests/run-task-execution-test.ps1`.
+
+The next implementation should be **M5.2: Multi-agent coordination**, formalizing how `routed_supporting_agents` (already persisted since M3) actually get invoked and hand off context alongside the primary agent — right now only the primary agent's execution is tracked through the lifecycle above. After that, M5.3 (fuller execution state — attempt history, not just current state) and M5.4 (bounded retries) build on top. Still no need to expand the agent count first.
